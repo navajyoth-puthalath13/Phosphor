@@ -1,6 +1,9 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "noEmit": false, "outDir": "dist", "rootDir": ".", "rewriteRelativeImportExtensions": true },
+  "compilerOptions": {
+    "noEmit": false, "outDir": "dist", "rootDir": ".", "rewriteRelativeImportExtensions": true,
+    "noCheck": true, "types": []
+  },
   "include": ["apps", "engines", "packages"],
   "exclude": ["**/*.test.ts"]
 }
