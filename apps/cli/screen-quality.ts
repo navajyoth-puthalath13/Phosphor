@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-// screen-quality CLI. Commands: detect
+// screen-quality CLI. Commands: detect, profiles, simulate
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { buildSourceProfiles, type HelperReport } from '../../engines/display-detection/build-profile.ts';
 import type { Sourced, SourceDisplayProfile } from '../../packages/profile-schema/index.ts';
+import { simulate, EFFECTS, type Effect } from '../../engines/display-reproduction/pipeline.ts';
+import { TARGETS, getTarget } from '../../packages/display-profiles/targets.ts';
+import { PNG } from 'pngjs';
 
 const HELPER_BUILD = fileURLToPath(new URL('../../native/macos-helper/build/screen-quality-helper', import.meta.url));
 
@@ -58,7 +61,42 @@ function main(argv: string[]) {
     console.log(values.json ? JSON.stringify(profiles, null, 2) : profiles.map(formatReport).join('\n\n'));
     return;
   }
-  console.log('usage: screen-quality detect [--json] [--from helper-report.json]');
+  if (cmd === 'profiles') {
+    for (const t of TARGETS) console.log(`${t.id.padEnd(22)} ${t.name}`);
+    return;
+  }
+  if (cmd === 'simulate') {
+    const { values, positionals } = parseArgs({ args: rest, allowPositionals: true, options: {
+      target: { type: 'string', short: 't' }, out: { type: 'string', short: 'o' },
+      'viewer-nits': { type: 'string' }, mode: { type: 'string', default: 'absolute' },
+      only: { type: 'string' }, disable: { type: 'string' },
+    } });
+    const target = getTarget(values.target ?? '');
+    if (!target) throw new Error(`unknown --target. Choose one of: ${TARGETS.map(t => t.id).join(', ')}`);
+    if (positionals.length !== 1 || !values.out) throw new Error('usage: screen-quality simulate <in.png> -t <target> -o <out.png>');
+    if (values.mode !== 'absolute' && values.mode !== 'adapted') throw new Error('--mode must be absolute or adapted');
+    const list = (v?: string) => (v ? v.split(',').map(e => { if (!EFFECTS.includes(e as Effect)) throw new Error(`unknown effect ${e}; effects: ${EFFECTS.join(', ')}`); return e as Effect; }) : []);
+    const enabled = new Set<Effect>(values.only ? list(values.only) : EFFECTS.filter(e => !list(values.disable).includes(e)));
+    const nits = values['viewer-nits'] == null ? null : Number(values['viewer-nits']);
+    if (nits != null && !(nits > 0)) throw new Error('--viewer-nits must be a positive number');
+
+    const bytes = readFileSync(positionals[0]);
+    const png = PNG.sync.read(bytes);
+    if (bytes.includes('iCCP')) console.error('note: input PNG embeds an ICC profile; it is interpreted as sRGB (export screenshots as sRGB for accurate results)');
+    const r = simulate(png.data, target, { whiteNits: nits, mode: values.mode }, enabled);
+    png.data = Buffer.from(r.data.buffer);
+    writeFileSync(values.out, PNG.sync.write(png));
+    r.warnings.forEach(w => console.error(`warning: ${w}`));
+    console.error(`${target.name}: ${[...enabled].join(', ')} → ${values.out}${r.outOfGamutPixels ? ` (${r.outOfGamutPixels} px gamut-mapped)` : ''}`);
+    return;
+  }
+  console.log([
+    'usage:',
+    '  screen-quality detect [--json] [--from helper-report.json]',
+    '  screen-quality profiles',
+    '  screen-quality simulate <in.png> -t <target> -o <out.png> [--viewer-nits N] [--mode absolute|adapted]',
+    `                          [--only e1,e2 | --disable e1,e2]   effects: ${EFFECTS.join(', ')}`,
+  ].join('\n'));
   if (cmd && cmd !== 'help' && cmd !== '--help') process.exitCode = 2;
 }
 

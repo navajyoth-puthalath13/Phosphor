@@ -8,6 +8,7 @@ export type Provenance =
   | 'os'                 // directly reported by the operating system
   | 'edid'               // EDID / DisplayID block (manufacturer-written, not measured)
   | 'icc'                // the active ICC profile (a calibration or a vendor default)
+  | 'standard'           // defined by a published standard (IEC, CIE, SMPTE…)
   | 'manufacturer-spec'  // published datasheet for the model, not this unit
   | 'measured'           // instrument measurement of this physical unit
   | 'user'               // typed in by the user

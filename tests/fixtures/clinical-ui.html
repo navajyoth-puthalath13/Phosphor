@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- Test page for the reproduction engine: the subtle distinctions the spec worries about (§2). -->
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #f7f8fa; color: #1d2433; width: 640px; }
+  .card { margin: 16px; background: #fff; border: 1px solid #e6e9ee; border-radius: 6px; padding: 16px; }
+  .label { color: #a3abb8; font-size: 12px; }
+  .row { display: flex; gap: 8px; margin: 8px 0; }
+  .surface { flex: 1; height: 36px; border-radius: 4px; display: grid; place-items: center; font-size: 11px; color: #667; }
+  .s0 { background: #ffffff; border: 1px solid #f0f2f5; } .s1 { background: #f7f8fa; } .s2 { background: #f0f2f5; } .s3 { background: #e8ebef; }
+  .pill { padding: 4px 10px; border-radius: 12px; color: #fff; font-weight: 600; font-size: 12px; }
+  .ok { background: #2e9e5b; } .warn { background: #e5a50a; } .crit { background: #d64545; } .info { background: #3b82f6; } .hold { background: #8b5cf6; }
+  .ramp { height: 28px; background: linear-gradient(90deg, #000, #333); border-radius: 4px; }
+  .ramp2 { height: 28px; background: linear-gradient(90deg, #ddd, #fff); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; } td { border-bottom: 1px solid #eef0f3; padding: 6px 4px; }
+</style>
+<div class="card">
+  <div class="label">PATIENT</div>
+  <div style="font-weight:600;font-size:16px">Ward 4B · Bed 12</div>
+  <div class="row"><span class="pill ok">Stable</span><span class="pill warn">Review</span><span class="pill crit">Critical</span><span class="pill info">Info</span><span class="pill hold">On hold</span></div>
+  <div class="label">SURFACES (#fff · #f7f8fa · #f0f2f5 · #e8ebef)</div>
+  <div class="row"><div class="surface s0">0</div><div class="surface s1">1</div><div class="surface s2">2</div><div class="surface s3">3</div></div>
+  <div class="label">SHADOW DETAIL (#000 → #333) and HIGHLIGHTS (#ddd → #fff)</div>
+  <div class="ramp"></div><div style="height:6px"></div><div class="ramp2"></div>
+  <table><tr><td class="label">Medication</td><td>Amoxicillin 500 mg</td></tr><tr><td class="label">Last dose</td><td>08:00</td></tr></table>
+</div>

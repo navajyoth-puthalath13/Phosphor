@@ -1,0 +1,58 @@
+# Architecture & decisions
+
+```
+apps/cli/screen-quality.ts          detect · profiles · simulate
+engines/display-detection/          Engine 1 — raw facts → SourceDisplayProfile (edid.ts, icc.ts, build-profile.ts)
+engines/display-reproduction/       Engine 2 — pixels + TargetDisplayProfile + ViewerContext → pixels (stages.ts, pipeline.ts)
+packages/profile-schema/            the only contract between the engines (types + provenance)
+packages/colour-math/               matrices, Bradford, transfer functions, OKLab — shared, tested against references
+packages/display-profiles/          generic target profiles, every value sourced
+native/macos-helper/main.swift      thin macOS fact dump (CoreGraphics, ColorSync ICC, AppKit, IOKit EDID) → JSON
+tests/fixtures/                     littleCMS sRGB ICC, EDID builder, recorded helper report, clinical UI page
+```
+
+Dependency rule: engines import `packages/*` only, never each other. Engine 2 never sees a
+`SourceDisplayProfile`; the caller reduces it to a `ViewerContext` (viewer white nits, mode).
+
+## Decisions (and where the spec was changed)
+
+1. **Native helper dumps, TypeScript interprets.** The helper is ~100 lines of Swift with no logic beyond
+   API calls. All parsing (EDID, ICC), matching EDID↔display, and provenance live in TypeScript, where they
+   are unit-tested on any OS. A recorded helper report replays anywhere: `detect --from report.json`.
+   Swift over Rust: every API needed is an Apple framework; Rust would add FFI for no gain.
+2. **Precedence OS > ICC > EDID**, each tagged. Luminance, contrast, panel bit depth and chroma are
+   always `unknown` from software — the report says how to obtain them instead of guessing.
+   Framebuffer, interface (EDID) and panel bit depths are three separate fields (spec §15.6).
+3. **Own ~100-line colour kernel instead of Culori/Color.js/LittleCMS.** The pipeline needs 3×3 matrices,
+   Bradford, sRGB/power curves and OKLab — all short, standard, and verified against published values
+   (IEC sRGB matrix, Lindbloom Bradford, Ottosson OKLab, CSS Color 4 P3 sample). LittleCMS is used only as an
+   independent writer of the test ICC profile. Revisit if ICC LUT-based (A2B) profiles become necessary.
+4. **Stage order follows signal flow**, not the spec's §8.1 list — see `display-model.md`.
+5. **FRC is a time-average (+2 bits)**, not spatial noise: a static frame cannot show temporal dithering
+   honestly.
+6. **Single package, Node ≥ 22.18 runs `.ts` directly** (type stripping): no build step, no bundler.
+   Workspaces/separate npm packages can be split out when npm distribution (spec §10) actually happens.
+7. **CPU first, memoised per unique colour.** UI screenshots have few unique colours, so this is fast. The
+   per-pixel function is deterministic and stateless, so it ports 1:1 to a GLSL shader or a 3D LUT for the
+   live DevTools view.
+
+## Status
+
+| Milestone | State |
+|---|---|
+| 1 Native detection | Swift helper written **but not yet compiled or run on a Mac** (developed on Linux). Everything downstream of it is tested. |
+| 2 Source profile | Done, tested |
+| 3 Reproduction engine | Done for screenshots (PNG), tested per stage and end-to-end |
+| 4 Target profiles | 7 generic profiles with sources; custom-profile save/load not yet |
+| 5 DevTools panel | Not started |
+| 6 Live reproduction | Not started |
+| 7 Homebrew | Not started |
+
+## Next steps
+
+1. Build and run the helper on real Macs (built-in panel, external HDMI/DP monitor) and add their reports to `tests/fixtures/`.
+2. DevTools panel: `chrome.devtools.panels.create('Screen Quality')`, capture via `chrome.tabs.captureVisibleTab`
+   (verify its colour space on macOS first), run Engine 2 in the panel on `ImageData`.
+3. Live view: render the per-pixel function as a 3D LUT and apply it through a WebGL overlay; needs research on
+   keeping pointer events on the page (`pointer-events: none` overlay fed by frame capture).
+4. Native Messaging host + `screen-quality setup` + Homebrew formula (compiles the helper with `swiftc`).
