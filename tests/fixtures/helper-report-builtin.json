@@ -1,0 +1,34 @@
+{
+  "helper": "screen-quality-macos-helper",
+  "helperVersion": "0.1.0",
+  "macOS": "15.1.0",
+  "edidsBase64": [],
+  "displays": [
+    {
+      "id": 1,
+      "main": true,
+      "builtIn": true,
+      "vendor": 1552,
+      "model": 41040,
+      "serial": 0,
+      "name": "Synthetic built-in (test fixture)",
+      "pixels": {
+        "width": 3024,
+        "height": 1964
+      },
+      "points": {
+        "width": 1512,
+        "height": 982
+      },
+      "refreshHz": 120,
+      "mm": {
+        "width": 302,
+        "height": 196
+      },
+      "colourSpaceName": "kCGColorSpaceSRGB",
+      "iccBase64": "AAACTGxjbXMEQAAAbW50clJHQiBYWVogB+oACgAeABIABQAcYWNzcEFQUEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALZGVzYwAAAQgAAAA2Y3BydAAAAUAAAABMd3RwdAAAAYwAAAAUY2hhZAAAAaAAAAAsclhZWgAAAcwAAAAUYlhZWgAAAeAAAAAUZ1hZWgAAAfQAAAAUclRSQwAAAggAAAAgZ1RSQwAAAggAAAAgYlRSQwAAAggAAAAgY2hybQAAAigAAAAkbWx1YwAAAAAAAAABAAAADGVuVVMAAAAaAAAAHABzAFIARwBCACAAYgB1AGkAbAB0AC0AaQBuAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAADAAAAAcAE4AbwAgAGMAbwBwAHkAcgBpAGcAaAB0ACwAIAB1AHMAZQAgAGYAcgBlAGUAbAB5WFlaIAAAAAAAAPbWAAEAAAAA0y1zZjMyAAAAAAABDEIAAAXe///zJQAAB5MAAP2Q///7of///aIAAAPcAADAblhZWiAAAAAAAABvoAAAOPUAAAOQWFlaIAAAAAAAACSfAAAPhAAAtsNYWVogAAAAAAAAYpcAALeHAAAY2XBhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbY2hybQAAAAAAAwAAAACj1wAAVHsAAEzNAACZmgAAJmYAAA9c",
+      "bitsPerSample": 8,
+      "edrMaxPotential": 16
+    }
+  ]
+}
