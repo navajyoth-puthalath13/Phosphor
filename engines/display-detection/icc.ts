@@ -72,13 +72,16 @@ export function parseIcc(buf: Uint8Array): IccInfo {
   // 'chad'; older v2 profiles store native white in 'wtpt' and Bradford-adapted colorants.
   const ct = tags.get('chad');
   const wtpt = xyz('wtpt');
+  // v2 profiles (macOS still writes them) keep the native white in wtpt even when chad is present,
+  // so wtpt is un-adapted only when it is the D50 PCS white.
+  const wtptIsD50 = !!wtpt && Math.abs(wtpt[0] - D50_ICC[0]) + Math.abs(wtpt[2] - D50_ICC[2]) <= 0.002;
   let toNative: Mat3 | null = null;
   if (ct) toNative = inv([0, 1, 2].map(r => [0, 1, 2].map(c => s15(ct.off + 8 + 4 * (3 * r + c)))) as Mat3);
-  else if (wtpt && Math.abs(wtpt[0] - D50_ICC[0]) + Math.abs(wtpt[2] - D50_ICC[2]) > 0.002) toNative = bradford(D50_ICC, wtpt);
+  else if (wtpt && !wtptIsD50) toNative = bradford(D50_ICC, wtpt);
   const native = (v: Vec3 | null) => (v ? XYZtoxy(toNative ? mul(toNative, v) : v) : null);
 
   const r = native(xyz('rXYZ')), g = native(xyz('gXYZ')), b = native(xyz('bXYZ'));
-  const white = native(wtpt);
+  const white = wtpt && !wtptIsD50 ? XYZtoxy(wtpt) : native(wtpt);
   const [tr, tg, tb] = ['rTRC', 'gTRC', 'bTRC'].map(trc);
   const differ = !!(tr && tg && tb) && [0.1, 0.5, 0.9].some(x => Math.abs(tr.f(x) - tg.f(x)) + Math.abs(tb.f(x) - tg.f(x)) > 1e-3);
 

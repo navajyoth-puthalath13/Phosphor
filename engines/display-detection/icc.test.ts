@@ -36,6 +36,21 @@ describe('parseIcc', () => {
     expect(p.luminance).toBeNull(); // no 'lumi' tag → unknown, not a default
   });
 
+  it('v2 profiles with chad keep their native white (Apple "Display" layout)', () => {
+    // Real macOS v2 profiles store the native white in wtpt *and* carry chad for the colorants.
+    // Regression: un-adapting wtpt a second time reported a MacBook as ~(0.2806, 0.2958).
+    const v2 = srgb.slice();
+    const dv = new DataView(v2.buffer);
+    v2[8] = 2; v2[9] = 0x10;                                   // version 2.1.0
+    const wt = [...Array(dv.getUint32(128)).keys()].map(i => 132 + 12 * i).find(t => String.fromCharCode(...v2.subarray(t, t + 4)) === 'wtpt')!;
+    const off = dv.getUint32(wt + 4);
+    [0.9505, 1, 1.089].forEach((v, i) => dv.setInt32(off + 8 + 4 * i, Math.round(v * 65536)));  // D65 XYZ
+    const q = parseIcc(v2);
+    expect(q.version).toBe('2.1.0');
+    expect(q.whitePoint!.x).toBeCloseTo(0.3127, 3); expect(q.whitePoint!.y).toBeCloseTo(0.3290, 3);
+    expect(q.primaries!.red.x).toBeCloseTo(0.64, 3);          // colorants are still un-adapted via chad
+  });
+
   it('rejects non-ICC data', () => {
     expect(() => parseIcc(new Uint8Array(200))).toThrow(/not an ICC/);
   });
