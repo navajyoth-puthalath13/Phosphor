@@ -13,10 +13,13 @@ Requires Node ≥ 22.18. Display detection additionally needs macOS with Xcode C
 
 ```bash
 git clone https://github.com/navajyoth-puthalath13/Phosphor.git
-cd Phosphor
+cd Phosphor          # skip if you are already in the folder
 npm install          # installs dependencies and builds dist/
 npm link             # puts `screen-quality` on your PATH
 ```
+
+If `npm link` fails with a permissions error, your Node is installed system-wide; either use Node from
+Homebrew (`brew install node`) or run the CLI without linking: `npm run sq -- profiles`.
 
 On macOS, build the native display helper once (from the same folder):
 

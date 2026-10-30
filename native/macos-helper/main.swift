@@ -46,7 +46,7 @@ func describe(_ id: CGDirectDisplayID) -> [String: Any] {
 
     if let s = screen(for: id) {
         d["name"] = s.localizedName
-        d["bitsPerSample"] = NSBitsPerSampleFromDepth(s.depth)
+        d["bitsPerSample"] = s.depth.bitsPerSample
         d["edrMaxPotential"] = s.maximumPotentialExtendedDynamicRangeColorComponentValue
     }
     return d
