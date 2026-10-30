@@ -9,17 +9,24 @@ white point, bit depth, chroma — and shows the result on yours. It is not a vi
 ## Install
 
 Requires Node ≥ 22.18. Display detection additionally needs macOS with Xcode Command Line Tools
-(`xcode-select --install`). Homebrew packaging is a later milestone; until then install from GitHub:
+(`xcode-select --install`). Homebrew packaging is a later milestone; until then:
 
 ```bash
-npm install -g github:navajyoth-puthalath13/Phosphor
+git clone https://github.com/navajyoth-puthalath13/Phosphor.git
+cd Phosphor
+npm install          # installs dependencies and builds dist/
+npm link             # puts `screen-quality` on your PATH
 ```
 
-On macOS, build the native display helper once:
+On macOS, build the native display helper once (from the same folder):
 
 ```bash
-(cd "$(npm root -g)/screen-quality/native/macos-helper" && ./build.sh)
+native/macos-helper/build.sh
 ```
+
+To update later: `git pull && npm install`. To remove: `npm unlink -g screen-quality`.
+
+(`npm install -g github:…` is not supported: npm 10 links global git installs to a temporary folder it then deletes.)
 
 ## Use
 
@@ -40,9 +47,8 @@ Effects: `luminance, contrast, gamut, gamma, whitePoint, bitDepth, chroma`.
 ## Develop
 
 ```bash
-git clone https://github.com/navajyoth-puthalath13/Phosphor && cd Phosphor
-npm install          # also builds dist/
-npm test             # unit + CLI smoke tests
+npm test                 # unit + CLI smoke tests
+npm run typecheck
 npm run sq -- profiles   # run the CLI from source, no build needed
 ```
 
