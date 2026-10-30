@@ -6,26 +6,45 @@ white point, bit depth, chroma — and shows the result on yours. It is not a vi
 
 ![Contact sheet](docs/contact-sheet.png)
 
-## Requirements
+## Install
 
-Node ≥ 22.18 (runs TypeScript directly). Display detection needs macOS + Xcode Command Line Tools.
+Requires Node ≥ 22.18. Display detection additionally needs macOS with Xcode Command Line Tools
+(`xcode-select --install`). Homebrew packaging is a later milestone; until then install from GitHub:
 
 ```bash
-npm install
-npm test
+npm install -g github:navajyoth-puthalath13/Phosphor
+```
+
+On macOS, build the native display helper once:
+
+```bash
+(cd "$(npm root -g)/screen-quality/native/macos-helper" && ./build.sh)
 ```
 
 ## Use
 
 ```bash
-native/macos-helper/build.sh                        # macOS: build the display helper
-node apps/cli/screen-quality.ts detect              # what is known — and unknown — about your display
-node apps/cli/screen-quality.ts profiles            # list target displays
-node apps/cli/screen-quality.ts simulate shot.png -t budget-tn -o out.png --viewer-nits 400
+screen-quality detect                    # what is known — and unknown — about your displays
+screen-quality detect --json             # the full Source Display Profile
+screen-quality profiles                  # list target displays
+screen-quality simulate shot.png -t budget-tn -o out.png --viewer-nits 400
 ```
 
 `simulate` options: `--mode absolute|adapted`, `--only gamut,contrast`, `--disable luminance`.
-Export screenshots as sRGB.
+Effects: `luminance, contrast, gamut, gamma, whitePoint, bitDepth, chroma`.
+
+- Export screenshots as **sRGB** (Chrome: DevTools → ⌘⇧P → "Capture screenshot" is sRGB-tagged on most setups).
+- `--viewer-nits` is the brightness of the display you are looking at. Without it, brightness differences are
+  not simulated (software cannot read it); everything else still is.
+
+## Develop
+
+```bash
+git clone https://github.com/navajyoth-puthalath13/Phosphor && cd Phosphor
+npm install          # also builds dist/
+npm test             # unit + CLI smoke tests
+npm run sq -- profiles   # run the CLI from source, no build needed
+```
 
 ## Docs
 

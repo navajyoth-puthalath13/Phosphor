@@ -4,9 +4,15 @@
   "private": true,
   "type": "module",
   "description": "Display compatibility & visual reproduction toolkit",
-  "bin": { "screen-quality": "apps/cli/screen-quality.ts" },
-  "engines": { "node": ">=22.18" },
+  "bin": {
+    "screen-quality": "dist/apps/cli/screen-quality.js"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
     "test": "vitest run",
     "typecheck": "tsc",
     "sq": "node apps/cli/screen-quality.ts"
@@ -19,5 +25,11 @@
     "@types/pngjs": "^6.0.5",
     "typescript": "~5.9.0",
     "vitest": "^4.0.0"
-  }
+  },
+  "files": [
+    "dist",
+    "native/macos-helper/main.swift",
+    "native/macos-helper/build.sh",
+    "docs"
+  ]
 }
