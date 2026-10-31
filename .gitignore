@@ -3,3 +3,5 @@ native/macos-helper/build/
 *.out.png
 graphify-out/
 dist/
+# raw helper dumps contain display serial numbers; commit only sanitised copies under tests/fixtures
+/*-report.json

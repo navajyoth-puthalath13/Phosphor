@@ -66,3 +66,24 @@ describe('buildSourceProfiles', () => {
     expect(p.detection.warnings[0]).toMatch(/ignored unreadable EDID/);
   });
 });
+
+describe('real hardware: MacBook Air built-in panel (macOS 27, ICC v2 "Display")', () => {
+  const report = JSON.parse(readFileSync(new URL('../../tests/fixtures/helper-report-macbook-air.json', import.meta.url), 'utf8'));
+  const [p] = buildSourceProfiles(report);
+
+  it('reads Display P3 primaries and a D65 white from the Apple v2 profile', () => {
+    const g = p.characteristics.gamut.value!;
+    expect(g.red.x).toBeCloseTo(0.68, 2); expect(g.green.y).toBeCloseTo(0.69, 2); expect(g.blue.y).toBeCloseTo(0.06, 2);
+    expect(p.characteristics.whitePoint.value!.x).toBeCloseTo(0.3127, 3);
+    expect(p.characteristics.whitePoint.value!.y).toBeCloseTo(0.3290, 3);
+    expect(p.characteristics.toneResponse.value).toMatchObject({ type: 'table', points: 1024 });
+    expect(p.colourProfile).toMatchObject({ description: 'Display', iccVersion: '2.1.0' });
+  });
+
+  it('identifies the panel and reports the expected unknowns', () => {
+    expect(p.identity.manufacturerPnpId.value).toBe('APP');
+    expect(p.geometry.pixels).toEqual({ width: 3420, height: 2224 });
+    expect(p.characteristics.edrHeadroom.value).toBe(2);
+    expect(p.characteristics.luminance.source).toBe('unknown');
+  });
+});
