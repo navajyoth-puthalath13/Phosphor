@@ -2,10 +2,11 @@
 
 ```
 apps/cli/screen-quality.ts          detect · profiles · simulate
-engines/display-detection/          Engine 1 — raw facts → SourceDisplayProfile (edid.ts, icc.ts, build-profile.ts)
-engines/display-reproduction/       Engine 2 — pixels + TargetDisplayProfile + ViewerContext → pixels (stages.ts, pipeline.ts)
+engines/display-detection/          Engine 1 — raw facts → SourceDisplayProfile (edid.ts, build-profile.ts)
+engines/display-reproduction/       Engine 2 — pixels + TargetDisplayProfile + ViewerContext → pixels (content.ts, stages.ts, pipeline.ts)
 packages/profile-schema/            the only contract between the engines (types + provenance)
 packages/colour-math/               matrices, Bradford, transfer functions, OKLab — shared, tested against references
+packages/icc/                       ICC v2/v4 matrix/TRC reader + PNG iCCP extraction — used by detection and by the CLI's input stage
 packages/display-profiles/          generic target profiles, every value sourced
 native/macos-helper/main.swift      thin macOS fact dump (CoreGraphics, ColorSync ICC, AppKit, IOKit EDID) → JSON
 tests/fixtures/                     littleCMS sRGB ICC, EDID builder, recorded helper report, clinical UI page
@@ -40,7 +41,7 @@ Dependency rule: engines import `packages/*` only, never each other. Engine 2 ne
 
 | Milestone | State |
 |---|---|
-| 1 Native detection | Swift helper written **but not yet compiled or run on a Mac** (developed on Linux). Everything downstream of it is tested. |
+| 1 Native detection | Verified on a MacBook Air (built-in panel, ICC v2 "Display" profile). External-monitor EDID path not yet run on hardware. |
 | 2 Source profile | Done, tested |
 | 3 Reproduction engine | Done for screenshots (PNG), tested per stage and end-to-end |
 | 4 Target profiles | 7 generic profiles with sources; custom-profile save/load not yet |

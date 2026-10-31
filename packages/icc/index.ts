@@ -1,8 +1,9 @@
 // Minimal ICC (v2 and v4) reader for RGB display profiles: just the tags that describe a matrix/TRC display.
 // Reference: ICC.1:2022 (v4.4) and ICC.1:2001-04 (v2).
 
-import type { XY, Primaries, ToneResponse } from '../../packages/profile-schema/index.ts';
-import { type Mat3, type Vec3, mul, inv, bradford, XYZtoxy, D50_ICC } from '../../packages/colour-math/index.ts';
+import { inflateSync } from 'node:zlib';
+import type { XY, Primaries, ToneResponse } from '../profile-schema/index.ts';
+import { type Mat3, type Vec3, mul, inv, bradford, XYZtoxy, D50_ICC } from '../colour-math/index.ts';
 
 export interface IccInfo {
   version: string;
@@ -15,6 +16,8 @@ export interface IccInfo {
   whitePoint: XY | null;
   toneResponse: ToneResponse | null;   // green channel, the luminance-dominant one
   trcsDiffer: boolean;
+  /** Per-channel encoded → linear curves, for converting images tagged with this profile. */
+  curves: [(x: number) => number, (x: number) => number, (x: number) => number] | null;
   luminance: number | null;            // 'lumi' tag, cd/m²
 }
 
@@ -95,8 +98,25 @@ export function parseIcc(buf: Uint8Array): IccInfo {
     whitePoint: white,
     toneResponse: tg?.tr ?? null,
     trcsDiffer: differ,
+    curves: tr && tg && tb ? [tr.f, tg.f, tb.f] : null,
     luminance: xyz('lumi')?.[1] ?? null,
   };
+}
+
+/** The ICC profile embedded in a PNG (iCCP chunk), or null. Stops at the first IDAT, as the spec requires iCCP before it. */
+export function iccFromPng(png: Uint8Array): Uint8Array | null {
+  const dv = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  for (let o = 8; o + 8 <= png.length;) {
+    const len = dv.getUint32(o), type = String.fromCharCode(...png.subarray(o + 4, o + 8));
+    if (type === 'IDAT' || type === 'IEND') return null;
+    if (type === 'iCCP') {
+      const data = png.subarray(o + 8, o + 8 + len);
+      const nul = data.indexOf(0);
+      return new Uint8Array(inflateSync(data.subarray(nul + 2))); // skip name, NUL and compression method
+    }
+    o += 12 + len;
+  }
+  return null;
 }
 
 /** Least-squares single gamma over mid-range samples: log y = γ log x. */

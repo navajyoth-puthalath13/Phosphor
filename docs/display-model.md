@@ -11,7 +11,7 @@ would emit** for the signal a website sends it, then asks the viewer's display t
 
 | # | Stage | Model | Parameter(s) | Source file |
 |---|---|---|---|---|
-| 0 | Content | 8-bit sRGB-encoded pixels (web default) | — | `pipeline.ts` |
+| 0 | Content | 8-bit pixels; if the PNG embeds an ICC profile (macOS screenshots: the display's, usually Display P3) they are converted to sRGB first (relative colorimetric, gamut-mapped) | embedded profile | `content.ts` |
 | 1 | OS colour management | If the target is colour-managed: sRGB → target RGB, relative colorimetric (Bradford D65 → target white), clipped — what ColorSync/ICM do. Unmanaged targets (typical Windows office PC) receive sRGB values untouched. | `colourManaged` | `stages.ts` |
 | 2 | Picture-mode chroma | OKLab chroma × gain at constant L and hue | **chroma** | `stages.ts` |
 | 3 | Panel quantisation | round to 2ⁿ−1 levels; FRC = time-average = n+2 bits | **bit depth**, dithering | `stages.ts` |

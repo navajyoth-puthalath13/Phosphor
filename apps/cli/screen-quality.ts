@@ -9,6 +9,8 @@ import type { Sourced, SourceDisplayProfile } from '../../packages/profile-schem
 import { simulate, EFFECTS, type Effect } from '../../engines/display-reproduction/pipeline.ts';
 import { TARGETS, getTarget } from '../../packages/display-profiles/targets.ts';
 import { PNG } from 'pngjs';
+import { parseIcc, iccFromPng } from '../../packages/icc/index.ts';
+import { contentToSrgb, isSrgbLike } from '../../engines/display-reproduction/content.ts';
 
 // Package root is two levels up from source (apps/cli) and three from the compiled dist/apps/cli.
 const ROOT = ['../../', '../../../'].map(p => new URL(p, import.meta.url)).find(u => existsSync(new URL('package.json', u)))!;
@@ -55,6 +57,27 @@ function formatReport(p: SourceDisplayProfile): string {
   return lines.join('\n');
 }
 
+/** Screenshots carry their colour space (macOS: the display's own, usually Display P3); the engine expects sRGB. */
+function toSrgbContent(bytes: Uint8Array, pixels: Uint8Array) {
+  const raw = iccFromPng(bytes);
+  if (!raw) return pixels;
+  try {
+    const icc = parseIcc(raw);
+    if (!icc.primaries || !icc.whitePoint || !icc.curves) {
+      console.error(`note: embedded profile "${icc.description}" is not matrix/TRC; pixels interpreted as sRGB`);
+      return pixels;
+    }
+    const space = { primaries: icc.primaries, white: icc.whitePoint, curves: icc.curves };
+    if (isSrgbLike(space)) return pixels;
+    const c = contentToSrgb(pixels, space);
+    console.error(`input: converted from embedded profile "${icc.description}" to sRGB${c.outOfGamutPixels ? ` (${c.outOfGamutPixels} px outside sRGB, gamut-mapped)` : ''}`);
+    return c.data;
+  } catch (e) {
+    console.error(`note: embedded ICC profile unreadable (${(e as Error).message}); pixels interpreted as sRGB`);
+    return pixels;
+  }
+}
+
 function main(argv: string[]) {
   const [cmd, ...rest] = argv;
   if (cmd === 'detect') {
@@ -84,8 +107,7 @@ function main(argv: string[]) {
 
     const bytes = readFileSync(positionals[0]);
     const png = PNG.sync.read(bytes);
-    if (bytes.includes('iCCP')) console.error('note: input PNG embeds an ICC profile; it is interpreted as sRGB (export screenshots as sRGB for accurate results)');
-    const r = simulate(png.data, target, { whiteNits: nits, mode: values.mode }, enabled);
+    const r = simulate(toSrgbContent(bytes, png.data), target, { whiteNits: nits, mode: values.mode }, enabled);
     png.data = Buffer.from(r.data.buffer);
     writeFileSync(values.out, PNG.sync.write(png));
     r.warnings.forEach(w => console.error(`warning: ${w}`));

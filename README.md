@@ -43,7 +43,16 @@ screen-quality simulate shot.png -t budget-tn -o out.png --viewer-nits 400
 `simulate` options: `--mode absolute|adapted`, `--only gamut,contrast`, `--disable luminance`.
 Effects: `luminance, contrast, gamut, gamma, whitePoint, bitDepth, chroma`.
 
-- Export screenshots as **sRGB** (Chrome: DevTools → ⌘⇧P → "Capture screenshot" is sRGB-tagged on most setups).
+- Screenshots can be taken any way you like: an embedded colour profile (macOS tags screenshots with
+  your display's, usually Display P3) is read and the image converted to sRGB first. Untagged PNGs are treated as sRGB.
+
+Quick try on a Mac — capture the screen, then simulate it:
+
+```bash
+screencapture -x ~/Desktop/sq-test.png
+screen-quality simulate ~/Desktop/sq-test.png -t budget-tn -o ~/Desktop/sq-budget-tn.png --viewer-nits 400
+open ~/Desktop/sq-test.png ~/Desktop/sq-budget-tn.png
+```
 - `--viewer-nits` is the brightness of the display you are looking at. Without it, brightness differences are
   not simulated (software cannot read it); everything else still is.
 

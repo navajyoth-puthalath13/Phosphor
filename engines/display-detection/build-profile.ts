@@ -5,7 +5,7 @@ import {
   SCHEMA_VERSION, unknown, type Sourced, type SourceDisplayProfile,
 } from '../../packages/profile-schema/index.ts';
 import { parseEdid, type Edid } from './edid.ts';
-import { parseIcc, type IccInfo } from './icc.ts';
+import { parseIcc, type IccInfo } from '../../packages/icc/index.ts';
 
 /** Exact JSON contract of native/macos-helper/main.swift. */
 export interface HelperReport {
