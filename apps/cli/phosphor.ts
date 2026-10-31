@@ -11,7 +11,7 @@ import type { Sourced, SourceDisplayProfile } from '../../packages/profile-schem
 import { simulate, EFFECTS, type Effect } from '../../engines/display-reproduction/pipeline.ts';
 import { TARGETS, getTarget } from '../../packages/display-profiles/targets.ts';
 import { validateTarget } from '../../packages/display-profiles/validate.ts';
-import { runSetup, doctor, serveNativeMessages, stateDir, STORE_URL, GUIDE } from './setup.ts';
+import { runSetup, doctor, serveNativeMessages, stateDir, browserApps, STORE_URL, GUIDE } from './setup.ts';
 import { PNG } from 'pngjs';
 import { parseIcc, iccFromPng } from '../../packages/icc/index.ts';
 import { contentToSrgb, isSrgbLike } from '../../engines/display-reproduction/content.ts';
@@ -103,16 +103,23 @@ function setup(args: string[]) {
   } else {
     console.log([
       '  Phosphor isn\'t on the Chrome Web Store yet, so use "Load unpacked" (free, one time):',
-      '    1. Open chrome://extensions in Chrome',
+      '    1. Open the extensions page in the browser you use (chrome://extensions, edge://extensions, brave://extensions)',
       '    2. Turn on "Developer mode" (top right)',
       '    3. Click "Load unpacked" and choose this folder:',
       `         ${r.extensionDir}`,
       mac ? '       (path copied — in the folder picker press ⌘⇧G, paste, Return)' : '',
+      '    4. Close and reopen DevTools — the "Phosphor" tab appears next to Elements, Console… (or under »)',
       `  Extension ID: ${r.extensionId}`,
     ].filter(Boolean).join('\n'));
     if (mac) {
       try { execFileSync('pbcopy', { input: r.extensionDir }); } catch { /* clipboard is a convenience */ }
-      try { execFileSync('open', ['-a', 'Google Chrome', 'chrome://extensions']); } catch { /* Chrome may not be installed */ }
+      const apps = browserApps(homedir());
+      const opened = apps.find(({ app, url }) => {
+        try { execFileSync('open', ['-a', app, url], { stdio: 'ignore' }); return true; } catch { return false; }
+      });
+      console.log(opened
+        ? `  Opened ${opened.app}'s extensions page${apps.length > 1 ? ` (also installed: ${apps.filter(a => a !== opened).map(a => a.app).join(', ')} — use whichever you work in)` : ''}.`
+        : '  Open the extensions page yourself in the browser you use (chrome://extensions).');
     }
   }
   console.log(GUIDE);

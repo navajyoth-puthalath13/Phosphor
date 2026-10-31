@@ -4,7 +4,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runSetup, doctor, extensionId, stableBrewPath, browsers, HOST_NAME } from './setup.ts';
+import { runSetup, doctor, extensionId, stableBrewPath, browsers, browserApps, HOST_NAME } from './setup.ts';
 
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const staticManifest = JSON.parse(readFileSync(here('../devtools-extension/static/manifest.json'), 'utf8'));
@@ -38,6 +38,13 @@ describe('phosphor setup', () => {
     const d = doctor(home, 'linux');
     expect(d.ok).toBe(true);
     expect(d.lines.join('\n')).toMatch(/hasn't connected yet/);
+  });
+
+  it('opens the extensions page of a browser that is actually installed, not just Chrome', () => {
+    const installed = new Set(['/Applications/Brave Browser.app', '/Users/x/Applications/Microsoft Edge.app']);
+    expect(browserApps('/Users/x', p => installed.has(p))).toEqual([
+      { app: 'Microsoft Edge', url: 'edge://extensions' }, { app: 'Brave Browser', url: 'brave://extensions' }]);
+    expect(browserApps('/Users/x', () => false)).toEqual([]);
   });
 
   it('doctor reports what is missing', () => {

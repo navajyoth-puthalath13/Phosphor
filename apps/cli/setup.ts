@@ -35,6 +35,16 @@ export function stableBrewPath(p: string, exists: (path: string) => boolean = ex
   return opt && exists(opt) ? opt : p;
 }
 
+/** Installed macOS browser apps and the URL of their extensions page, in order of preference. */
+export function browserApps(home: string, exists: (path: string) => boolean = existsSync) {
+  const apps = [
+    ['Google Chrome', 'chrome://extensions'], ['Google Chrome Beta', 'chrome://extensions'], ['Google Chrome Canary', 'chrome://extensions'],
+    ['Chromium', 'chrome://extensions'], ['Microsoft Edge', 'edge://extensions'], ['Brave Browser', 'brave://extensions'], ['Arc', 'arc://extensions'],
+  ] as const;
+  return apps.filter(([app]) => exists(`/Applications/${app}.app`) || exists(join(home, 'Applications', `${app}.app`)))
+    .map(([app, url]) => ({ app, url }));
+}
+
 export interface SetupResult { extensionDir: string; extensionId: string; wrapper: string; registered: string[] }
 
 export function runSetup(o: { home: string; platform?: NodeJS.Platform; cliPath: string; nodePath: string; extensionSrc: string }): SetupResult {
