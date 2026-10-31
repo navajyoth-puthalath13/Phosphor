@@ -1,141 +1,203 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 <meta charset="utf-8">
 <title>Phosphor</title>
 <link rel="stylesheet" href="panel.css">
 <body>
-<main>
-  <div class="col">
-  <section aria-labelledby="h-source">
-    <h2 id="h-source">Your display</h2>
-    <p id="source-status" class="status">Detecting…</p>
-    <dl id="source-facts" class="facts"></dl>
-    <div class="row">
-      <label for="viewer-nits">Your display's brightness</label>
-      <input id="viewer-nits" type="number" min="20" max="2000" step="10" placeholder="unknown" inputmode="numeric">
-      <span class="unit">cd/m²</span>
-    </div>
-    <p class="hint">Software can't read brightness. Without it, brightness differences aren't simulated; everything else is.</p>
-  </section>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" class="fill"/></symbol>
+    <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3A4.7 4.7 0 0 0 21 9.8C21 6 17 3 12 3z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8M7 21v-7h10v7"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-side" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/></symbol>
+    <symbol id="i-split" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M12 2v20" stroke-dasharray="2 2"/></symbol>
+    <symbol id="i-diff" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 7v6M9 10h6M9 17h6"/></symbol>
+    <symbol id="i-max" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  </defs>
+</svg>
 
-  <section aria-labelledby="h-target">
-    <h2 id="h-target">Target display</h2>
-    <div class="row">
-      <label for="target">Display</label>
-      <select id="target"></select>
-    </div>
-    <p id="target-notes" class="hint"></p>
-  </section>
-  </div>
-
-  <section aria-labelledby="h-repro">
-    <h2 id="h-repro">Reproduction</h2>
-    <p class="hint">Untick a characteristic to see the page without that limitation.</p>
-    <div class="ctl" data-effect="luminance">
-      <input type="checkbox" id="on-luminance" checked aria-label="Simulate luminance">
-      <label for="luminance">Luminance</label>
-      <input id="luminance" type="range" min="50" max="1000" step="5">
-      <output for="luminance" id="luminance-out"></output>
-    </div>
-    <div class="ctl" data-effect="contrast">
-      <input type="checkbox" id="on-contrast" checked aria-label="Simulate contrast">
-      <label for="contrast">Contrast ratio</label>
-      <input id="contrast" type="range" min="1.7" max="6" step="0.01">
-      <output for="contrast" id="contrast-out"></output>
-    </div>
-    <div class="ctl" data-effect="gamut">
-      <input type="checkbox" id="on-gamut" checked aria-label="Simulate colour gamut">
-      <label for="gamut">Colour gamut</label>
-      <select id="gamut">
-        <option value="srgb">sRGB</option>
-        <option value="p3">Display P3</option>
-        <option value="adobe">Adobe RGB</option>
-        <option value="rec2020">Rec. 2020</option>
-        <option value="ntsc45">45% NTSC (budget)</option>
-        <option value="smptec">SMPTE-C (CRT/CCFL)</option>
-        <option value="custom">Custom…</option>
-      </select>
-      <output id="gamut-out"></output>
-    </div>
-    <fieldset id="gamut-custom" class="xy" hidden>
-      <legend>Primaries (CIE xy)</legend>
-      <label>R x <input data-p="red.x" type="number" step="0.001" min="0" max="1"></label>
-      <label>y <input data-p="red.y" type="number" step="0.001" min="0" max="1"></label>
-      <label>G x <input data-p="green.x" type="number" step="0.001" min="0" max="1"></label>
-      <label>y <input data-p="green.y" type="number" step="0.001" min="0" max="1"></label>
-      <label>B x <input data-p="blue.x" type="number" step="0.001" min="0" max="1"></label>
-      <label>y <input data-p="blue.y" type="number" step="0.001" min="0" max="1"></label>
-    </fieldset>
-    <div class="ctl" data-effect="gamma">
-      <input type="checkbox" id="on-gamma" checked aria-label="Simulate tone response">
-      <label for="gamma">Gamma</label>
-      <input id="gamma" type="range" min="1.8" max="2.8" step="0.05">
-      <output for="gamma" id="gamma-out"></output>
-    </div>
-    <div class="ctl sub">
-      <span></span>
-      <label class="wide small"><input id="srgb-curve" type="checkbox"> Use the sRGB curve instead of a power law</label>
-    </div>
-    <div class="ctl" data-effect="whitePoint">
-      <input type="checkbox" id="on-whitePoint" checked aria-label="Simulate white point">
-      <label for="white">White point</label>
-      <input id="white" type="range" min="5000" max="10000" step="100">
-      <output for="white" id="white-out"></output>
-    </div>
-    <div class="ctl" data-effect="bitDepth">
-      <input type="checkbox" id="on-bitDepth" checked aria-label="Simulate colour depth">
-      <label for="bits">Colour depth</label>
-      <span class="inline">
-        <select id="bits"><option value="6">6-bit</option><option value="8">8-bit</option><option value="10">10-bit</option></select>
-        <label class="small"><input id="frc" type="checkbox"> FRC</label>
-      </span>
-      <output id="bits-out"></output>
-    </div>
-    <div class="ctl" data-effect="chroma">
-      <input type="checkbox" id="on-chroma" checked aria-label="Simulate chroma">
-      <label for="chroma">Chroma</label>
-      <input id="chroma" type="range" min="0" max="1.5" step="0.05">
-      <output for="chroma" id="chroma-out"></output>
-    </div>
-    <details>
-      <summary>Advanced</summary>
-      <div class="row">
-        <label for="managed">OS colour-manages this display</label>
-        <input id="managed" type="checkbox">
+<div class="app">
+  <aside class="side">
+    <section class="card" aria-labelledby="h-source">
+      <header class="card-head">
+        <svg class="ico lg"><use href="#i-monitor"/></svg>
+        <div><h2 id="h-source">Your Display</h2><p id="source-status" class="sub">Detecting…</p></div>
+        <span id="source-badge" class="badge pending">Detecting</span>
+      </header>
+      <dl id="source-facts" class="facts"></dl>
+      <div class="field">
+        <label for="viewer-nits">Your display's brightness</label>
+        <div class="num-unit"><input id="viewer-nits" type="number" min="20" max="2000" step="10" placeholder="unknown"><span>cd/m²</span></div>
+        <p class="hint">Software can't read brightness. Enter it to simulate dimmer displays.</p>
       </div>
-      <div class="row">
-        <label for="mode">Viewing</label>
-        <select id="mode">
-          <option value="absolute">Side by side (absolute)</option>
-          <option value="adapted">Eye adapted to the target (adapted)</option>
-        </select>
-      </div>
-    </details>
-    <div class="buttons">
-      <button id="reset" type="button">Reset to profile</button>
-      <button id="save" type="button">Save as my profile…</button>
-      <button id="delete" type="button" hidden>Delete my profile</button>
-      <button id="export" type="button">Export JSON</button>
-      <label class="button" for="import">Import JSON</label>
-      <input id="import" type="file" accept="application/json,.json" hidden>
-    </div>
-  </section>
+    </section>
 
-  <section aria-labelledby="h-sim">
-    <h2 id="h-sim">Simulation</h2>
-    <div class="buttons">
-      <label class="switch"><input id="live" type="checkbox" checked> Live on page</label>
-      <button id="hold" type="button" title="Hold to see the original page">Hold to compare</button>
-      <button id="capture" type="button">Capture preview</button>
-    </div>
-    <p id="sim-status" class="status" role="status" aria-live="polite"></p>
-    <figure id="preview-wrap" hidden>
-      <canvas id="preview"></canvas>
-      <label class="split">Original ◀ <input id="split" type="range" min="0" max="100" value="50" aria-label="Compare original and simulated"> ▶ Simulated</label>
-      <figcaption class="hint">Captured preview: exact model including OKLCh gamut mapping. Live mode is GPU-accelerated and matches it within ~1/255 except where noted.</figcaption>
-    </figure>
-  </section>
-</main>
+    <section class="card" aria-labelledby="h-target">
+      <header class="card-head">
+        <svg class="ico lg"><use href="#i-monitor"/></svg>
+        <div><h2 id="h-target">Target Display</h2><p class="sub">Simulates how your design may look on a target display.</p></div>
+      </header>
+      <select id="target" class="select-lg" aria-label="Target display"></select>
+      <p id="target-notes" class="note"><svg class="ico"><use href="#i-info"/></svg><span></span></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-presets">
+      <h2 id="h-presets" class="plain">Quick Presets</h2>
+      <div class="presets" role="group" aria-labelledby="h-presets">
+        <button type="button" data-preset="srgb-reference"><svg class="ico"><use href="#i-monitor"/></svg>Identity</button>
+        <button type="button" data-preset="older-ccfl-lcd"><svg class="ico"><use href="#i-monitor"/></svg>Old LCD</button>
+        <button type="button" data-preset="budget-tn"><svg class="ico"><use href="#i-monitor"/></svg>Budget TN</button>
+        <button type="button" data-preset="office-ips"><svg class="ico"><use href="#i-monitor"/></svg>Office IPS</button>
+        <button type="button" data-preset="crt-9300k"><svg class="ico"><use href="#i-monitor"/></svg>CRT</button>
+        <button type="button" data-preset="oled-wide-unmanaged"><svg class="ico"><use href="#i-monitor"/></svg>OLED</button>
+      </div>
+    </section>
+  </aside>
+
+  <main class="main">
+    <section class="card" aria-labelledby="h-chars">
+      <header class="card-head wrap">
+        <div><h2 id="h-chars" class="xl">Display Characteristics</h2><p class="sub">Adjust display parameters to simulate different screens.</p></div>
+        <div class="actions">
+          <button id="reset" type="button"><svg class="ico"><use href="#i-reset"/></svg>Reset to profile</button>
+          <button id="save" type="button"><svg class="ico"><use href="#i-save"/></svg>Save profile…</button>
+          <button id="delete" type="button" hidden>Delete profile</button>
+          <button id="export" type="button"><svg class="ico"><use href="#i-upload"/></svg>Export JSON</button>
+          <label class="button" for="import"><svg class="ico"><use href="#i-download"/></svg>Import JSON</label>
+          <input id="import" type="file" accept="application/json,.json" hidden>
+        </div>
+      </header>
+
+      <div class="tabs" role="tablist" aria-label="Characteristics">
+        <button role="tab" id="tab-light" aria-controls="pane-light" aria-selected="true"><svg class="ico"><use href="#i-sun"/></svg>Light</button>
+        <button role="tab" id="tab-colour" aria-controls="pane-colour" aria-selected="false" tabindex="-1"><svg class="ico"><use href="#i-palette"/></svg>Colour</button>
+        <button role="tab" id="tab-pixel" aria-controls="pane-pixel" aria-selected="false" tabindex="-1"><svg class="ico"><use href="#i-grid"/></svg>Pixel</button>
+        <button role="tab" id="tab-panel" aria-controls="pane-panel" aria-selected="false" tabindex="-1"><svg class="ico"><use href="#i-monitor"/></svg>Optics &amp; Panel</button>
+        <button role="tab" id="tab-advanced" aria-controls="pane-advanced" aria-selected="false" tabindex="-1"><svg class="ico"><use href="#i-sliders"/></svg>Advanced</button>
+      </div>
+
+      <div id="pane-light" role="tabpanel" aria-labelledby="tab-light" class="pane">
+        <div class="ctl" data-effect="luminance">
+          <div class="ctl-head"><input type="checkbox" id="on-luminance" checked><label for="on-luminance">Luminance (Brightness)</label><span class="tag" data-src="luminance"></span></div>
+          <p class="desc">Maximum luminance of the display.</p>
+          <div class="ctl-row"><svg class="ico"><use href="#i-sun"/></svg><input id="luminance" type="range" min="50" max="1000" step="5" aria-label="Luminance"><input id="luminance-num" type="number" min="1" max="10000" step="1" aria-label="Luminance in cd/m²"><span class="unit">cd/m²</span></div>
+        </div>
+        <div class="ctl" data-effect="contrast">
+          <div class="ctl-head"><input type="checkbox" id="on-contrast" checked><label for="on-contrast">Contrast ratio</label><span class="tag" data-src="contrastRatio"></span></div>
+          <p class="desc">Difference between brightest white and darkest black.</p>
+          <div class="ctl-row"><svg class="ico"><use href="#i-contrast"/></svg><input id="contrast" type="range" min="1.7" max="6" step="0.01" aria-label="Contrast ratio"><input id="contrast-num" type="number" min="1" max="1000000" step="1" aria-label="Contrast ratio"><span class="unit">:1</span></div>
+        </div>
+        <div class="ctl" data-effect="whitePoint">
+          <div class="ctl-head"><input type="checkbox" id="on-whitePoint" checked><label for="on-whitePoint">White point</label><span class="tag" data-src="whitePoint"></span></div>
+          <p class="desc">Colour temperature of white.</p>
+          <div class="ctl-row"><svg class="ico"><use href="#i-thermo"/></svg><input id="white" type="range" min="5000" max="10000" step="100" aria-label="White point"><input id="white-num" type="number" min="4000" max="25000" step="50" aria-label="White point in kelvin"><span class="unit">K</span></div>
+        </div>
+        <div class="ctl" data-effect="gamma">
+          <div class="ctl-head"><input type="checkbox" id="on-gamma" checked><label for="on-gamma">Gamma</label><span class="tag" data-src="toneResponse"></span></div>
+          <p class="desc">Tone response curve.</p>
+          <div class="ctl-row"><span class="ico glyph" aria-hidden="true">γ</span><input id="gamma" type="range" min="1.8" max="2.8" step="0.05" aria-label="Gamma"><input id="gamma-num" type="number" min="1" max="4" step="0.01" aria-label="Gamma"><span class="unit"></span></div>
+          <label class="check"><input id="srgb-curve" type="checkbox"> Use the sRGB curve instead of a power law
+            <span class="ico info" title="The IEC 61966-2-1 piecewise curve: linear near black, ~2.2 overall."><svg class="ico"><use href="#i-info"/></svg></span></label>
+        </div>
+      </div>
+
+      <div id="pane-colour" role="tabpanel" aria-labelledby="tab-colour" class="pane" hidden>
+        <div class="ctl" data-effect="gamut">
+          <div class="ctl-head"><input type="checkbox" id="on-gamut" checked><label for="on-gamut">Colour gamut</label><span class="tag" data-src="primaries"></span></div>
+          <p class="desc">The range of colours the panel can produce.</p>
+          <div class="ctl-row"><svg class="ico"><use href="#i-palette"/></svg>
+            <select id="gamut" aria-label="Colour gamut">
+              <option value="srgb">sRGB</option><option value="p3">Display P3</option><option value="adobe">Adobe RGB</option>
+              <option value="rec2020">Rec. 2020</option><option value="ntsc45">45% NTSC (budget)</option><option value="smptec">SMPTE-C (CRT/CCFL)</option>
+              <option value="custom">Custom (Advanced tab)</option>
+            </select></div>
+        </div>
+        <div class="ctl" data-effect="chroma">
+          <div class="ctl-head"><input type="checkbox" id="on-chroma" checked><label for="on-chroma">Chroma</label><span class="tag" data-src="chroma"></span></div>
+          <p class="desc">Picture-mode saturation (OKLab chroma).</p>
+          <div class="ctl-row"><svg class="ico"><use href="#i-palette"/></svg><input id="chroma" type="range" min="0" max="1.5" step="0.05" aria-label="Chroma"><input id="chroma-num" type="number" min="0" max="3" step="0.05" aria-label="Chroma"><span class="unit">×</span></div>
+        </div>
+      </div>
+
+      <div id="pane-pixel" role="tabpanel" aria-labelledby="tab-pixel" class="pane" hidden>
+        <div class="ctl" data-effect="bitDepth">
+          <div class="ctl-head"><input type="checkbox" id="on-bitDepth" checked><label for="on-bitDepth">Colour depth</label><span class="tag" data-src="bitDepth"></span></div>
+          <p class="desc">Panel bits per channel. 6-bit panels band smooth gradients unless they dither (FRC).</p>
+          <div class="ctl-row"><svg class="ico"><use href="#i-grid"/></svg>
+            <select id="bits" aria-label="Colour depth"><option value="6">6-bit</option><option value="8">8-bit</option><option value="10">10-bit</option></select>
+            <label class="check inline"><input id="frc" type="checkbox"> FRC dithering</label></div>
+        </div>
+      </div>
+
+      <div id="pane-panel" role="tabpanel" aria-labelledby="tab-panel" class="pane" hidden>
+        <div class="ctl">
+          <div class="ctl-head"><label for="mode">Viewing</label></div>
+          <p class="desc">Side by side: the light that would reach your eye next to your own display. Adapted: as if your eye had adjusted to the target's own white and brightness.</p>
+          <div class="ctl-row"><svg class="ico"><use href="#i-eye"/></svg>
+            <select id="mode" aria-label="Viewing"><option value="absolute">Side by side (absolute)</option><option value="adapted">Eye adapted to the target</option></select></div>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="managed">OS colour management</label></div>
+          <p class="desc">Whether the target computer converts colours to the panel's gamut. Most office PCs don't, so wide-gamut panels over-saturate.</p>
+          <label class="check"><input id="managed" type="checkbox"> The target's OS colour-manages this display</label>
+        </div>
+        <div class="ctl muted">
+          <div class="ctl-head"><span>Not modelled yet</span></div>
+          <p class="desc">Viewing angle (TN/VA colour and gamma shift), screen reflections and ambient light, CRT optics. These need measured data per panel class; they're shown here so nothing is implied.</p>
+        </div>
+      </div>
+
+      <div id="pane-advanced" role="tabpanel" aria-labelledby="tab-advanced" class="pane" hidden>
+        <fieldset id="gamut-custom" class="ctl xy">
+          <legend>Custom primaries (CIE 1931 xy)</legend>
+          <label>Red x <input data-p="red.x" type="number" step="0.001" min="0" max="1"></label><label>y <input data-p="red.y" type="number" step="0.001" min="0" max="1"></label>
+          <label>Green x <input data-p="green.x" type="number" step="0.001" min="0" max="1"></label><label>y <input data-p="green.y" type="number" step="0.001" min="0" max="1"></label>
+          <label>Blue x <input data-p="blue.x" type="number" step="0.001" min="0" max="1"></label><label>y <input data-p="blue.y" type="number" step="0.001" min="0" max="1"></label>
+          <p class="desc">Editing these sets the gamut to Custom. Each x, y between 0 and 1 with x + y ≤ 1.</p>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-sim">
+      <header class="card-head wrap">
+        <svg class="ico lg"><use href="#i-eye"/></svg>
+        <div class="grow"><h2 id="h-sim" class="xl">Simulation Preview</h2><p class="sub">Compare how your current display and the simulated display reproduce the same content.</p></div>
+        <div class="actions">
+          <label class="switch"><input id="live" type="checkbox" checked><span class="track"></span>Live on page</label>
+          <button id="hold" type="button" title="Hold to see the original page">Hold to compare</button>
+          <div class="seg" role="group" aria-label="Preview layout">
+            <button type="button" data-view="side" aria-pressed="true"><svg class="ico"><use href="#i-side"/></svg>Side by side</button>
+            <button type="button" data-view="split" aria-pressed="false"><svg class="ico"><use href="#i-split"/></svg>Split</button>
+            <button type="button" data-view="diff" aria-pressed="false"><svg class="ico"><use href="#i-diff"/></svg>Difference</button>
+          </div>
+          <button id="capture" type="button" title="Capture the page again"><svg class="ico"><use href="#i-camera"/></svg>Capture</button>
+          <button id="fullscreen" type="button" class="icon-only" title="Full screen" aria-label="Full screen preview"><svg class="ico"><use href="#i-max"/></svg></button>
+        </div>
+      </header>
+      <p id="sim-status" class="status" role="status" aria-live="polite"></p>
+      <div id="preview-wrap" class="preview" hidden>
+        <div class="views">
+          <figure class="pane-a"><figcaption><span class="dot blue"></span>Your display (Actual)</figcaption><canvas id="view-a"></canvas></figure>
+          <figure class="pane-b"><figcaption><span class="dot orange"></span><span id="sim-caption">Simulated display</span></figcaption><canvas id="view-b"></canvas></figure>
+        </div>
+        <label id="split-row" class="split" hidden>Original <input id="split" type="range" min="0" max="100" value="50" aria-label="Split position"> Simulated</label>
+        <p class="hint">Preview is the exact model. Live on page is GPU-accelerated and matches it within ~1/255, except where noted above.</p>
+      </div>
+    </section>
+  </main>
+</div>
 <script type="module" src="apps/devtools-extension/panel.js"></script>
 </body>
 </html>

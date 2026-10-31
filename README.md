@@ -104,6 +104,12 @@ store that runs the same extension.
 
 ## What's new
 
+**0.3.0**
+- **Redesigned DevTools panel**: your display, target display and quick presets on the left; display characteristics
+  in tabs (Light, Colour, Pixel, Optics & Panel, Advanced) with a slider *and* a typed value for each; a simulation
+  preview with side-by-side, split and difference views, filled in automatically when the panel opens.
+- Live on page is on by default; `npm run graph` serves the code map on localhost.
+
 **0.2.0**
 - **Chrome DevTools panel** with all seven controls, per-effect toggles, provenance tags and a captured preview.
 - **Live website reproduction**: the display model compiled into a GPU filter on the page; layout and interaction untouched.

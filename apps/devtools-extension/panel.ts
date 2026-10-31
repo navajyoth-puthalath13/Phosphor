@@ -12,7 +12,7 @@ import { applyLive, removeLive, LIVE_ID } from './live.ts';
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const tabId = chrome.devtools.inspectedWindow.tabId;
 chrome.runtime.connect({ name: `phosphor-panel:${tabId}` }); // lets the background restore the page when DevTools closes
-if (chrome.devtools.panels.themeName === 'dark') document.documentElement.classList.add('dark');
+document.documentElement.classList.toggle('dark', chrome.devtools.panels.themeName === 'dark');
 
 const GAMUTS: Record<string, Primaries> = { srgb: SRGB, p3: DISPLAY_P3, adobe: ADOBE_RGB, rec2020: REC2020, ntsc45: NTSC45, smptec: SMPTE_C };
 const user = <T>(value: T, unit?: string): Sourced<T> => ({ value, source: 'user', confidence: 'medium', unit, note: 'set in the Phosphor panel' });
@@ -23,15 +23,18 @@ let work: TargetDisplayProfile = structuredClone(base);
 const enabled = new Set<Effect>(EFFECTS);
 let viewerNits: number | null = null;
 let live = true; // on by default: changing a control should visibly change the page
-let preview: { original: ImageData } | null = null;
+let view: 'side' | 'split' | 'diff' = 'side';
+let original: ImageData | null = null;
+let simulated: ImageData | null = null;
 
 // ---------- persistence ----------
 
 async function load() {
-  const s = await chrome.storage.local.get(['custom', 'viewerNits', 'mode', 'targetId', 'live']);
+  const s = await chrome.storage.local.get(['custom', 'viewerNits', 'mode', 'targetId', 'live', 'view']);
   live = s.live !== false;
   $<HTMLInputElement>('live').checked = live;
   $<HTMLButtonElement>('hold').disabled = !live;
+  if (s.view === 'split' || s.view === 'diff') view = s.view;
   custom = ((s.custom as unknown[]) ?? []).flatMap(t => { try { return [validateTarget(t)]; } catch { return []; } });
   viewerNits = typeof s.viewerNits === 'number' ? s.viewerNits : null;
   $<HTMLSelectElement>('mode').value = s.mode === 'adapted' ? 'adapted' : 'absolute';
@@ -44,31 +47,29 @@ const save = (patch: Record<string, unknown>) => chrome.storage.local.set(patch)
 
 async function detect() {
   const r = await chrome.runtime.sendMessage({ type: 'detect' }) as { profiles?: SourceDisplayProfile[]; error?: string };
-  const status = $('source-status');
-  if (!r?.profiles) {
-    status.textContent = r?.error ?? 'Native helper not connected. Run `phosphor setup` in Terminal.';
-    status.className = 'status warn';
+  const badge = $('source-badge'), status = $('source-status');
+  if (!r?.profiles?.length) {
+    badge.textContent = 'Not connected'; badge.className = 'badge warn';
+    status.textContent = r?.error ?? 'Run `phosphor setup` in Terminal.';
     return;
   }
   const p = r.profiles.find(d => d.identity.main) ?? r.profiles[0];
-  if (!p) { status.textContent = 'No displays reported.'; return; }
-  status.textContent = `Detected by the Phosphor helper${r.profiles.length > 1 ? ` (${r.profiles.length} displays; showing the main one)` : ''}.`;
-  status.className = 'status';
+  badge.textContent = 'Detected'; badge.className = 'badge ok';
+  status.textContent = `Detected by Phosphor helper${r.profiles.length > 1 ? ` (main of ${r.profiles.length} displays)` : ''}.`;
   const c = p.characteristics, wp = c.whitePoint.value;
   const facts: [string, string, string?][] = [
     ['Display', p.identity.name.value ?? 'unnamed'],
-    ['Resolution', `${p.geometry.pixels.width}×${p.geometry.pixels.height}`],
+    ['Resolution', `${p.geometry.pixels.width} × ${p.geometry.pixels.height}`],
     ['Colour profile', p.colourProfile?.description ?? 'none'],
     ['Gamut', c.gamut.value ? gamutName(c.gamut.value) : 'unknown', c.gamut.source],
     ['White point', wp ? `${Math.round(cctFromXY(wp) / 50) * 50} K` : 'unknown', c.whitePoint.source],
     ['Framebuffer', c.framebufferBitsPerComponent.value ? `${c.framebufferBitsPerComponent.value}-bit` : 'unknown', c.framebufferBitsPerComponent.source],
-    ['Unknown', (['luminance', 'contrastRatio', 'panelBitsPerComponent', 'chroma'] as const).filter(k => c[k].value == null)
-      .map(k => ({ luminance: 'brightness', contrastRatio: 'contrast', panelBitsPerComponent: 'panel bit depth', chroma: 'picture-mode saturation' })[k]).join(', ')],
+    ['Unknown', 'Brightness, contrast, panel bit depth and picture-mode saturation: no software can read them.'],
   ];
   $('source-facts').replaceChildren(...facts.flatMap(([k, v, src]) => {
     const dt = document.createElement('dt'); dt.textContent = k;
     const dd = document.createElement('dd'); dd.textContent = v;
-    if (src && src !== 'unknown') dd.append(tag(src));
+    if (src && src !== 'unknown') dd.append(tag(src.toUpperCase()));
     return [dt, dd];
   }));
   if (viewerNits == null && c.luminance.value != null) { viewerNits = c.luminance.value; $<HTMLInputElement>('viewer-nits').value = String(viewerNits); update(); }
@@ -77,68 +78,93 @@ async function detect() {
 const tag = (text: string) => Object.assign(document.createElement('span'), { className: 'tag', textContent: text });
 const near = (a: Primaries, b: Primaries) => (['red', 'green', 'blue'] as const).every(k => Math.abs(a[k].x - b[k].x) + Math.abs(a[k].y - b[k].y) < 0.003);
 const gamutKey = (p: Primaries) => Object.keys(GAMUTS).find(k => near(GAMUTS[k], p)) ?? 'custom';
-const gamutName = (p: Primaries) => ($<HTMLSelectElement>('gamut').querySelector(`option[value="${gamutKey(p)}"]`)?.textContent ?? 'custom').replace('…', '');
+const gamutName = (p: Primaries) => ($<HTMLSelectElement>('gamut').querySelector(`option[value="${gamutKey(p)}"]`)?.textContent ?? 'Custom').replace(/ \(.*\)$/, '');
 
-// ---------- target selector and controls ----------
+// ---------- target, presets, controls ----------
 
 function fillTargets() {
-  const sel = $<HTMLSelectElement>('target');
   const group = (label: string, list: TargetDisplayProfile[]) => {
     const g = document.createElement('optgroup'); g.label = label;
     for (const t of list) g.append(new Option(t.name, t.id, false, t.id === base.id));
     return g;
   };
-  sel.replaceChildren(group('Generic displays', TARGETS), ...(custom.length ? [group('My profiles', custom)] : []));
+  $('target').replaceChildren(group('Generic displays', TARGETS), ...(custom.length ? [group('My profiles', custom)] : []));
+}
+
+function selectTarget(id: string) {
+  base = [...TARGETS, ...custom].find(t => t.id === id) ?? base;
+  work = structuredClone(base);
+  save({ targetId: base.id }); fillTargets(); render(); update();
+}
+
+/** A slider and a number field bound to one characteristic. Slider scale may differ (contrast is logarithmic). */
+interface Pair { id: string; get(): number; set(v: number): void; toSlider?(v: number): number; fromSlider?(s: number): number; digits: number }
+const PAIRS: Pair[] = [
+  { id: 'luminance', digits: 0, get: () => work.luminance.value ?? 250, set: v => (work.luminance = user(v, 'cd/m²')) },
+  { id: 'contrast', digits: 0, get: () => Math.min(work.contrastRatio.value ?? 1e6, 1e6), set: v => (work.contrastRatio = user(v, ':1')),
+    toSlider: v => Math.log10(v), fromSlider: s => Math.round(10 ** s) },
+  { id: 'white', digits: 0, get: () => Math.round(cctFromXY(work.whitePoint.value ?? daylightXY(6504)) / 50) * 50, set: v => (work.whitePoint = user(daylightXY(v), 'CIE 1931 xy')) },
+  { id: 'gamma', digits: 2, get: () => { const t = work.toneResponse.value; return t?.type === 'gamma' ? t.gamma : 2.2; }, set: v => (work.toneResponse = user({ type: 'gamma' as const, gamma: v })) },
+  { id: 'chroma', digits: 2, get: () => work.chroma.value ?? 1, set: v => (work.chroma = user(v)) },
+];
+
+function paintSlider(el: HTMLInputElement) {
+  el.style.setProperty('--fill', `${((+el.value - +el.min) / (+el.max - +el.min)) * 100}%`);
 }
 
 function render() {
-  const v = <T>(s: Sourced<T>) => s.value;
-  const set = (id: string, value: string | number) => { ($(id) as HTMLInputElement).value = String(value); };
-  set('luminance', v(work.luminance) ?? 250);
-  const cr = v(work.contrastRatio);
-  set('contrast', cr == null || cr >= 1e6 ? 6 : Math.log10(cr));
-  const prim = v(work.primaries) ?? SRGB;
-  set('gamut', gamutKey(prim));
-  $('gamut-custom').hidden = gamutKey(prim) !== 'custom';
+  for (const p of PAIRS) {
+    const v = p.get(), slider = $<HTMLInputElement>(p.id);
+    slider.value = String(p.toSlider ? p.toSlider(v) : v); paintSlider(slider);
+    $<HTMLInputElement>(`${p.id}-num`).value = v.toFixed(p.digits);
+  }
+  const srgbCurve = work.toneResponse.value?.type === 'srgb';
+  $<HTMLInputElement>('srgb-curve').checked = srgbCurve;
+  for (const id of ['gamma', 'gamma-num']) $<HTMLInputElement>(id).disabled = srgbCurve;
+  const prim = work.primaries.value ?? SRGB;
+  $<HTMLSelectElement>('gamut').value = gamutKey(prim);
   for (const inp of $('gamut-custom').querySelectorAll<HTMLInputElement>('input')) {
     const [c, k] = inp.dataset.p!.split('.') as ['red' | 'green' | 'blue', 'x' | 'y'];
     inp.value = prim[c][k].toFixed(4);
   }
-  const tone = v(work.toneResponse);
-  $<HTMLInputElement>('srgb-curve').checked = tone?.type === 'srgb';
-  $<HTMLInputElement>('gamma').disabled = tone?.type === 'srgb';
-  set('gamma', tone?.type === 'gamma' ? tone.gamma : 2.2);
-  set('white', Math.round(cctFromXY(v(work.whitePoint) ?? daylightXY(6504)) / 100) * 100);
-  set('bits', v(work.bitDepth) ?? 8);
+  $<HTMLSelectElement>('bits').value = String(work.bitDepth.value ?? 8);
   $<HTMLInputElement>('frc').checked = work.dithering === 'frc';
-  set('chroma', v(work.chroma) ?? 1);
   $<HTMLInputElement>('managed').checked = work.colourManaged;
   $('delete').hidden = !custom.some(t => t.id === base.id);
-  $('target-notes').textContent = [`${base.technology}${base.backlight ? `, ${base.backlight} backlight` : ''}.`, ...base.assumptions].join(' ');
-  outputs();
+  $('target-notes').querySelector('span')!.textContent = [`${base.technology}${base.backlight ? `, ${base.backlight} backlight` : ''}.`, ...base.assumptions].join(' ');
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-preset]')) b.setAttribute('aria-pressed', String(b.dataset.preset === base.id));
+  $('sim-caption').textContent = `Simulated display (${work.name})`;
+  tags();
 }
 
-function outputs() {
-  const out = (id: string, text: string, s?: Sourced<unknown>) => { const o = $(`${id}-out`); o.textContent = text; if (s) o.append(tag(s.source)); };
-  out('luminance', `${work.luminance.value} cd/m²`, work.luminance);
-  const cr = work.contrastRatio.value;
-  out('contrast', cr == null || cr >= 1e6 ? 'ideal' : `${Math.round(cr).toLocaleString()}:1`, work.contrastRatio);
-  out('gamut', '', work.primaries);
-  const tone = work.toneResponse.value;
-  out('gamma', tone?.type === 'gamma' ? tone.gamma.toFixed(2) : 'sRGB', work.toneResponse);
-  out('white', `${Math.round(cctFromXY(work.whitePoint.value!) / 50) * 50} K`, work.whitePoint);
-  out('bits', `${work.bitDepth.value}-bit${work.dithering === 'frc' ? '+FRC' : ''}`, work.bitDepth);
-  out('chroma', `${work.chroma.value?.toFixed(2)}×`, work.chroma);
+function tags() {
+  for (const t of document.querySelectorAll<HTMLElement>('[data-src]')) t.textContent = (work as any)[t.dataset.src!]?.source ?? '';
   for (const e of EFFECTS) document.querySelector(`.ctl[data-effect="${e}"]`)!.classList.toggle('off', !enabled.has(e));
 }
 
 function wire() {
-  const on = (id: string, ev: string, fn: (el: any) => void) => $(id).addEventListener(ev, () => { fn($(id)); outputs(); update(); });
-  on('luminance', 'input', el => (work.luminance = user(+el.value, 'cd/m²')));
-  on('contrast', 'input', el => (work.contrastRatio = user(+el.value >= 5.99 ? 1e6 : Math.round(10 ** +el.value), ':1')));
+  const changed = () => { tags(); update(); };
+  for (const p of PAIRS) {
+    const slider = $<HTMLInputElement>(p.id), num = $<HTMLInputElement>(`${p.id}-num`);
+    slider.addEventListener('input', () => {
+      const v = p.fromSlider ? p.fromSlider(+slider.value) : +slider.value;
+      p.set(v); num.value = v.toFixed(p.digits); paintSlider(slider); changed();
+    });
+    num.addEventListener('change', () => {
+      const v = Math.min(Math.max(+num.value, +num.min), +num.max);
+      if (!Number.isFinite(v)) { num.value = p.get().toFixed(p.digits); return; }
+      p.set(v); num.value = v.toFixed(p.digits);
+      slider.value = String(p.toSlider ? p.toSlider(v) : v); paintSlider(slider); changed();
+    });
+  }
+  const on = (id: string, ev: string, fn: (el: any) => void) => $(id).addEventListener(ev, () => { fn($(id)); changed(); });
+  on('srgb-curve', 'change', el => {
+    work.toneResponse = user(el.checked ? { type: 'srgb' as const } : { type: 'gamma' as const, gamma: +$<HTMLInputElement>('gamma-num').value });
+    for (const id of ['gamma', 'gamma-num']) $<HTMLInputElement>(id).disabled = el.checked;
+  });
   on('gamut', 'change', el => {
-    if (el.value !== 'custom') work.primaries = user(structuredClone(GAMUTS[el.value]), 'CIE 1931 xy');
-    $('gamut-custom').hidden = el.value !== 'custom';
+    if (el.value === 'custom') { showTab('advanced'); return; }
+    work.primaries = user(structuredClone(GAMUTS[el.value]), 'CIE 1931 xy'); render();
   });
   $('gamut-custom').addEventListener('change', () => {
     const p = structuredClone(work.primaries.value ?? SRGB);
@@ -146,36 +172,26 @@ function wire() {
       const [c, k] = inp.dataset.p!.split('.') as ['red' | 'green' | 'blue', 'x' | 'y'];
       p[c][k] = +inp.value;
     }
-    try { validateTarget({ ...work, primaries: user(p) }); work.primaries = user(p, 'CIE 1931 xy'); }
+    try { validateTarget({ ...work, primaries: user(p) }); }
     catch { status('Those primaries don\'t form a valid gamut (each x, y in 0–1 with x + y ≤ 1).', 'err'); return; }
-    outputs(); update();
+    work.primaries = user(p, 'CIE 1931 xy'); render(); update();
   });
-  on('gamma', 'input', el => (work.toneResponse = user({ type: 'gamma' as const, gamma: +el.value })));
-  on('srgb-curve', 'change', el => {
-    work.toneResponse = user(el.checked ? { type: 'srgb' as const } : { type: 'gamma' as const, gamma: +$<HTMLInputElement>('gamma').value });
-    $<HTMLInputElement>('gamma').disabled = el.checked;
-  });
-  on('white', 'input', el => (work.whitePoint = user(daylightXY(+el.value), 'CIE 1931 xy')));
   on('bits', 'change', el => (work.bitDepth = user(+el.value, 'bits')));
   on('frc', 'change', el => (work.dithering = el.checked ? 'frc' : 'none'));
-  on('chroma', 'input', el => (work.chroma = user(+el.value)));
   on('managed', 'change', el => (work.colourManaged = el.checked));
   on('mode', 'change', el => save({ mode: el.value }));
   on('viewer-nits', 'change', el => { viewerNits = el.value && +el.value > 0 ? +el.value : null; save({ viewerNits }); });
   for (const e of EFFECTS) on(`on-${e}`, 'change', el => (el.checked ? enabled.add(e) : enabled.delete(e)));
 
-  $('target').addEventListener('change', () => {
-    base = [...TARGETS, ...custom].find(t => t.id === $<HTMLSelectElement>('target').value)!;
-    work = structuredClone(base);
-    save({ targetId: base.id }); render(); update();
-  });
+  $('target').addEventListener('change', () => selectTarget($<HTMLSelectElement>('target').value));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-preset]')) b.addEventListener('click', () => selectTarget(b.dataset.preset!));
   $('reset').addEventListener('click', () => { work = structuredClone(base); render(); update(); });
   $('save').addEventListener('click', saveCustom);
   $('delete').addEventListener('click', async () => {
     if (!confirm(`Delete "${base.name}"?`)) return;
     custom = custom.filter(t => t.id !== base.id);
     await save({ custom });
-    base = TARGETS[0]; work = structuredClone(base); fillTargets(); render(); update();
+    selectTarget(TARGETS[0].id);
   });
   $('export').addEventListener('click', () => {
     const a = document.createElement('a');
@@ -195,6 +211,17 @@ function wire() {
     (e.target as HTMLInputElement).value = '';
   });
 
+  // Tabs (WAI-ARIA tabs pattern: arrow keys move between tabs).
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('[role=tab]')];
+  for (const t of tabs) {
+    t.addEventListener('click', () => showTab(t.id.slice(4)));
+    t.addEventListener('keydown', e => {
+      const i = tabs.indexOf(t), next = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : null;
+      if (next == null) return;
+      const n = tabs[(next + tabs.length) % tabs.length]; showTab(n.id.slice(4)); n.focus();
+    });
+  }
+
   $<HTMLInputElement>('live').addEventListener('change', e => {
     live = (e.target as HTMLInputElement).checked;
     save({ live });
@@ -209,9 +236,20 @@ function wire() {
   for (const ev of ['pointerup', 'pointerleave']) hold.addEventListener(ev, up);
   hold.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) down(); });
   hold.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') up(); });
+
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-view]')) b.addEventListener('click', () => { view = b.dataset.view as typeof view; save({ view }); drawPreview(); });
   $('capture').addEventListener('click', capture);
   $('split').addEventListener('input', drawPreview);
+  $('fullscreen').addEventListener('click', () => $('preview-wrap').requestFullscreen().catch(() => {}));
   chrome.devtools.network.onNavigated.addListener(() => { if (live) setTimeout(applyNow, 300); });
+}
+
+function showTab(name: string) {
+  for (const t of document.querySelectorAll<HTMLButtonElement>('[role=tab]')) {
+    const on = t.id === `tab-${name}`;
+    t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
+    $(t.getAttribute('aria-controls')!).hidden = !on;
+  }
 }
 
 async function saveCustom() {
@@ -248,10 +286,10 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 function update() {
   const { p, warnings } = params();
   const notes = live ? compileFilter(p).approximations.map(a => `Live: ${a}.`) : [];
-  const off = live ? [] : ['Live is off: the page isn\'t changing. Tick "Live on page", or use Capture preview.'];
+  const off = live ? [] : ['Live is off: the page isn\'t changing. Turn on "Live on page", or use the preview.'];
   status([...off, ...warnings.map(w => `${w[0].toUpperCase()}${w.slice(1)}.`), ...notes].join(' ') || 'Live on page.', warnings.length || !live ? 'warn' : '');
   if (live) applyNow();
-  if (preview) { clearTimeout(timer); timer = setTimeout(simulatePreview, 200); }
+  if (original) { clearTimeout(timer); timer = setTimeout(simulatePreview, 150); }
 }
 
 function status(text: string, kind: '' | 'warn' | 'err' = '') {
@@ -263,43 +301,55 @@ async function capture() {
   if (live) { evalInPage(`(${removeLive})(${JSON.stringify(LIVE_ID)})`); await new Promise(r => setTimeout(r, 150)); } // let the page repaint unfiltered
   const r = await chrome.runtime.sendMessage({ type: 'capture', tabId }) as { dataUrl?: string; error?: string };
   if (live) applyNow();
-  if (!r?.dataUrl) { status(`Capture failed: ${r?.error ?? 'no image'}. Click the page once, then try again.`, 'err'); return; }
+  if (!r?.dataUrl) { status(`Capture failed: ${r?.error ?? 'no image'}. Click the page once, then press Capture.`, 'err'); return; }
   const img = new Image(); img.src = r.dataUrl; await img.decode();
   const c = new OffscreenCanvas(img.naturalWidth, img.naturalHeight);
   const ctx = c.getContext('2d', { colorSpace: 'srgb' })!; // the browser converts a tagged capture to sRGB here
   ctx.drawImage(img, 0, 0);
-  preview = { original: ctx.getImageData(0, 0, c.width, c.height, { colorSpace: 'srgb' }) };
+  original = ctx.getImageData(0, 0, c.width, c.height, { colorSpace: 'srgb' });
   $('preview-wrap').hidden = false;
   simulatePreview();
 }
 
-let simulated: ImageData | null = null;
 function simulatePreview() {
-  if (!preview) return;
-  const { width, height, data } = preview.original;
+  if (!original) return;
   const t0 = performance.now();
-  const r = simulate(data, work, { whiteNits: viewerNits, mode: $<HTMLSelectElement>('mode').value as 'absolute' | 'adapted' }, enabled);
-  simulated = new ImageData(r.data, width, height);
+  const r = simulate(original.data, work, { whiteNits: viewerNits, mode: $<HTMLSelectElement>('mode').value as 'absolute' | 'adapted' }, enabled);
+  simulated = new ImageData(r.data, original.width, original.height);
   drawPreview();
+  if (!live) return; // keep the "live is off" message visible
   const extra = r.outOfGamutPixels ? ` ${r.outOfGamutPixels.toLocaleString()} px were outside sRGB and gamut-mapped.` : '';
-  status(`Preview ${width}×${height} simulated in ${Math.round(performance.now() - t0)} ms.${extra}`);
+  status(`Preview ${original.width}×${original.height} in ${Math.round(performance.now() - t0)} ms.${extra}`);
 }
 
 function drawPreview() {
-  if (!preview || !simulated) return;
-  const canvas = $<HTMLCanvasElement>('preview');
-  const { width, height } = preview.original;
-  canvas.width = width; canvas.height = height;
-  const ctx = canvas.getContext('2d')!;
-  const x = Math.round(width * +$<HTMLInputElement>('split').value / 100);
-  ctx.putImageData(preview.original, 0, 0);
-  ctx.putImageData(simulated, 0, 0, x, 0, width - x, height);
-  ctx.fillStyle = '#fff'; ctx.fillRect(x - 1, 0, 2, height);
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-view]')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
+  $('preview-wrap').classList.toggle('single', view !== 'side');
+  $('split-row').hidden = view !== 'split';
+  if (!original || !simulated) return;
+  const { width, height } = original;
+  const put = (id: string, img: ImageData) => { const c = $<HTMLCanvasElement>(id); c.width = width; c.height = height; c.getContext('2d')!.putImageData(img, 0, 0); return c; };
+  if (view === 'side') { put('view-a', original); put('view-b', simulated); return; }
+  if (view === 'split') {
+    const c = put('view-b', original), ctx = c.getContext('2d')!, x = Math.round(width * +$<HTMLInputElement>('split').value / 100);
+    ctx.putImageData(simulated, 0, 0, x, 0, width - x, height);
+    ctx.fillStyle = '#fff'; ctx.fillRect(x - 1, 0, 2, height);
+    return;
+  }
+  // Difference: where the target changes the picture, amplified ×4 so small shifts are visible.
+  const d = new ImageData(width, height);
+  for (let i = 0; i < d.data.length; i += 4) {
+    for (let k = 0; k < 3; k++) d.data[i + k] = Math.min(255, Math.abs(original.data[i + k] - simulated.data[i + k]) * 4);
+    d.data[i + 3] = 255;
+  }
+  put('view-b', d);
 }
 
 // ---------- start ----------
 
 await load();
 $<HTMLInputElement>('viewer-nits').value = viewerNits == null ? '' : String(viewerNits);
-fillTargets(); render(); wire(); update();
+fillTargets(); render(); wire(); drawPreview();
 detect();
+await capture(); // fills the preview straight away; capture() applies live mode afterwards
+update();

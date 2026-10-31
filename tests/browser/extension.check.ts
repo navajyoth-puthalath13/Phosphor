@@ -80,24 +80,43 @@ assert(/url\("?#phosphor-live-filter"?\)/.test(filter), 'live mode applies the f
 if (shots) await target.screenshot({ path: join(shots, 'live-budget-tn.png') });
 
 await panel.fill('#contrast', '2'); await panel.dispatchEvent('#contrast', 'input'); // 100:1
-assert((await panel.textContent('#contrast-out'))!.startsWith('100:1'), 'contrast slider updates its readout');
+assert(await panel.inputValue('#contrast-num') === '100', 'contrast slider updates its number field');
+await panel.fill('#luminance-num', '150'); await panel.dispatchEvent('#luminance-num', 'change');
+assert(await panel.inputValue('#luminance') === '150', 'typing a number moves the slider');
+await panel.click('[data-preset="crt-9300k"]');
+assert(await panel.inputValue('#target') === 'crt-9300k' && await panel.getAttribute('[data-preset="crt-9300k"]', 'aria-pressed') === 'true', 'quick preset selects the target');
+await panel.click('#tab-pixel');
+assert(await panel.isVisible('#bits') && !(await panel.isVisible('#luminance')), 'tabs switch the visible characteristics');
+await panel.click('#tab-light');
+await panel.click('[data-view="diff"]');
+assert(await panel.getAttribute('[data-view="diff"]', 'aria-pressed') === 'true', 'difference view selectable');
+await panel.click('[data-view="side"]');
+await panel.selectOption('#target', 'budget-tn');
 
+assert(!(await panel.isHidden('#preview-wrap')), 'the preview fills in automatically when the panel opens');
 await panel.click('#capture');
-await panel.waitForFunction(() => /simulated in/.test(document.getElementById('sim-status')!.textContent!), null, { timeout: 20000 });
-assert(!(await panel.isHidden('#preview-wrap')), 'capture produces the original/simulated preview');
+await panel.waitForFunction(() => /^Preview \d+×\d+/.test(document.getElementById('sim-status')!.textContent!), null, { timeout: 20000 });
+assert(true, 'Capture refreshes the original/simulated preview');
 
 panel.once('dialog', (d: any) => d.accept('Ward 4B monitor'));
 await panel.click('#save');
 await panel.waitForSelector('#target option[value="ward-4b-monitor"]', { state: 'attached' });
 assert(true, 'saving a custom profile adds it under "My profiles"');
-if (shots) await panel.screenshot({ path: join(shots, 'panel.png'), fullPage: true });
+if (shots) {
+  await panel.screenshot({ path: join(shots, 'panel.png'), fullPage: true });
+  await panel.evaluate(() => document.documentElement.classList.add('dark'));
+  await panel.screenshot({ path: join(shots, 'panel-dark.png'), fullPage: true });
+  await panel.setViewportSize({ width: 1750, height: 900 });
+  await panel.screenshot({ path: join(shots, 'panel-dark-wide.png'), fullPage: true });
+  await panel.evaluate(() => document.documentElement.classList.remove('dark'));
+}
 
-await panel.uncheck('#live');
+await panel.click('label.switch'); // users click the switch, not the hidden checkbox
 await new Promise(r => setTimeout(r, 300));
 const restored = await target.evaluate(() => [document.documentElement.style.getPropertyValue('filter'), document.documentElement.style.getPropertyValue('min-height'), !!document.getElementById('phosphor-live')]);
 assert(restored[0] === '' && restored[1] === '50px' && !restored[2], 'turning live off restores the page exactly (its own inline styles too)');
 
-await panel.check('#live'); await new Promise(r => setTimeout(r, 300));
+await panel.click('label.switch'); await new Promise(r => setTimeout(r, 300));
 assert(/Live is off/.test(await panel.textContent('#sim-status') ?? '') === false, 'status no longer says live is off once re-enabled');
 await panel.close();
 await new Promise(r => setTimeout(r, 800));
