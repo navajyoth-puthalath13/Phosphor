@@ -1,6 +1,6 @@
 {
   "name": "phosphor",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "description": "Display compatibility & visual reproduction toolkit",
@@ -17,7 +17,8 @@
     "typecheck": "tsc",
     "cli": "node apps/cli/phosphor.ts",
     "build:extension": "tsc -p tsconfig.extension.json && node -e \"require('fs').cpSync('apps/devtools-extension/static', 'dist/extension', { recursive: true })\"",
-    "check:browser": "npm run build && node tests/browser/live-filter.check.ts && node tests/browser/extension.check.ts"
+    "check:browser": "npm run build && node tests/browser/live-filter.check.ts && node tests/browser/extension.check.ts",
+    "graph": "graphify extract . --code-only && graphify cluster-only . && echo '\\nCode graph: http://localhost:8765/graph.html  (Ctrl-C to stop)\\n' && python3 -m http.server 8765 --bind 127.0.0.1 -d graphify-out"
   },
   "dependencies": {
     "pngjs": "^7.0.0"

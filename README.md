@@ -57,7 +57,7 @@ Browsers never let a program install an extension by itself — you always confi
 | **Target display** | a generic display class or one of your saved profiles |
 | **Reproduction** | the seven characteristics, each with a slider and an on/off tick: luminance (cd/m²), contrast ratio, colour gamut (sRGB, Display P3, Adobe RGB, Rec. 2020, budget 45% NTSC, CRT/CCFL, or your own primaries), gamma (or the sRGB curve), white point (5000–10000 K), colour depth (6/8/10-bit, FRC), chroma. Every value shows where it came from: `standard`, `estimated`, `user`… |
 | **My profiles** | *Save as my profile*, delete, and *Export / Import JSON* to share a profile with your team |
-| **Simulation** | **Live on page** — the page itself changes; layout, scrolling and clicks keep working. **Hold to compare** shows the original while held. **Capture preview** — an exact still with a draggable original/simulated split. |
+| **Simulation** | **Live on page** (on by default) — the page itself changes; layout, scrolling and clicks keep working. **Hold to compare** shows the original while held. **Capture preview** — an exact still with a draggable original/simulated split. |
 
 `phosphor guide` prints this list in the terminal.
 
@@ -149,7 +149,7 @@ npm run cli -- setup             # connect your browser to this checkout
 native/macos-helper/build.sh     # macOS: build the display helper
 ```
 
-Explore the code graph: `uv tool install graphifyy && graphify extract . --code-only && graphify cluster-only . && open graphify-out/graph.html`.
+Explore the code graph on localhost: install Graphify once (`uv tool install graphifyy`), then `npm run graph` and open http://localhost:8765/graph.html.
 Project agent skills live in `.claude/skills/` (Ponytail, addyosmani/agent-skills, Graphify).
 
 ## Status

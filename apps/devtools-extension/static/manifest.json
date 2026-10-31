@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Phosphor",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "See how your page reproduces on other displays: luminance, contrast, gamut, gamma, white point, bit depth, chroma.",
   "devtools_page": "devtools.html",
   "background": { "service_worker": "apps/devtools-extension/background.js", "type": "module" },

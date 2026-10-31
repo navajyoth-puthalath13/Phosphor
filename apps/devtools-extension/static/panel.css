@@ -32,6 +32,7 @@ h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: v
 .inline { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
 .inline select { width: auto; }
 .small { font-size: 11px; }
+#viewer-nits { width: 90px; }
 input[type=range] { width: 100%; accent-color: var(--accent); }
 select, input[type=number], button, .button {
   font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px;

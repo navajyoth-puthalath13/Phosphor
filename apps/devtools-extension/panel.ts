@@ -22,13 +22,16 @@ let base: TargetDisplayProfile = TARGETS.find(t => t.id === 'budget-tn')!;
 let work: TargetDisplayProfile = structuredClone(base);
 const enabled = new Set<Effect>(EFFECTS);
 let viewerNits: number | null = null;
-let live = false;
+let live = true; // on by default: changing a control should visibly change the page
 let preview: { original: ImageData } | null = null;
 
 // ---------- persistence ----------
 
 async function load() {
-  const s = await chrome.storage.local.get(['custom', 'viewerNits', 'mode', 'targetId']);
+  const s = await chrome.storage.local.get(['custom', 'viewerNits', 'mode', 'targetId', 'live']);
+  live = s.live !== false;
+  $<HTMLInputElement>('live').checked = live;
+  $<HTMLButtonElement>('hold').disabled = !live;
   custom = ((s.custom as unknown[]) ?? []).flatMap(t => { try { return [validateTarget(t)]; } catch { return []; } });
   viewerNits = typeof s.viewerNits === 'number' ? s.viewerNits : null;
   $<HTMLSelectElement>('mode').value = s.mode === 'adapted' ? 'adapted' : 'absolute';
@@ -194,6 +197,7 @@ function wire() {
 
   $<HTMLInputElement>('live').addEventListener('change', e => {
     live = (e.target as HTMLInputElement).checked;
+    save({ live });
     $<HTMLButtonElement>('hold').disabled = !live;
     if (live) applyNow(); else evalInPage(`(${removeLive})(${JSON.stringify(LIVE_ID)})`);
     update();
@@ -244,7 +248,8 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 function update() {
   const { p, warnings } = params();
   const notes = live ? compileFilter(p).approximations.map(a => `Live: ${a}.`) : [];
-  status([...warnings.map(w => `${w[0].toUpperCase()}${w.slice(1)}.`), ...notes].join(' ') || (live ? 'Live on page.' : ''), warnings.length ? 'warn' : '');
+  const off = live ? [] : ['Live is off: the page isn\'t changing. Tick "Live on page", or use Capture preview.'];
+  status([...off, ...warnings.map(w => `${w[0].toUpperCase()}${w.slice(1)}.`), ...notes].join(' ') || 'Live on page.', warnings.length || !live ? 'warn' : '');
   if (live) applyNow();
   if (preview) { clearTimeout(timer); timer = setTimeout(simulatePreview, 200); }
 }

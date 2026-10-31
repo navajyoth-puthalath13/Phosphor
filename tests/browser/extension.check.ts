@@ -65,9 +65,15 @@ await panel.waitForFunction(() => /Detected/.test(document.getElementById('sourc
 assert(true, 'panel shows the display detected through native messaging');
 assert((await panel.textContent('#source-facts'))!.includes('Built-in Retina Display'), 'source display facts rendered');
 
+await new Promise(r => setTimeout(r, 400));
+const matrix = () => target.evaluate(() => document.querySelector('#phosphor-live feColorMatrix')?.getAttribute('values') ?? null);
+assert(await panel.isChecked('#live') && (await matrix()) !== null, 'live mode is on as soon as the panel opens');
+const before = await matrix();
+await panel.selectOption('#target', 'crt-9300k');
+await new Promise(r => setTimeout(r, 300));
+assert((await matrix()) !== before, 'switching the target display changes the page immediately');
 await panel.selectOption('#target', 'budget-tn');
 await panel.fill('#viewer-nits', '400'); await panel.dispatchEvent('#viewer-nits', 'change');
-await panel.check('#live');
 await new Promise(r => setTimeout(r, 400));
 const filter = await target.evaluate(() => document.documentElement.style.getPropertyValue('filter'));
 assert(/url\("?#phosphor-live-filter"?\)/.test(filter), 'live mode applies the filter to the inspected page');
@@ -92,6 +98,7 @@ const restored = await target.evaluate(() => [document.documentElement.style.get
 assert(restored[0] === '' && restored[1] === '50px' && !restored[2], 'turning live off restores the page exactly (its own inline styles too)');
 
 await panel.check('#live'); await new Promise(r => setTimeout(r, 300));
+assert(/Live is off/.test(await panel.textContent('#sim-status') ?? '') === false, 'status no longer says live is off once re-enabled');
 await panel.close();
 await new Promise(r => setTimeout(r, 800));
 assert(await target.evaluate(() => !document.getElementById('phosphor-live')), 'closing DevTools removes the live filter');
