@@ -2,9 +2,9 @@ class Phosphor < Formula
   desc "See how a UI reproduces on other displays: luminance, contrast, gamut, gamma, more"
   homepage "https://github.com/navajyoth-puthalath13/Phosphor"
   # Pinned to a commit tarball; switch to refs/tags/vX.Y.Z once releases are tagged.
-  url "https://github.com/navajyoth-puthalath13/Phosphor/archive/6a2ac0d55cec3705bb69d6172aa5db1a72beabd8.tar.gz"
-  version "0.3.0"
-  sha256 "938aeb66484f2d38b994781307b8905bdd68a28eba4d7efe0a59d405d61b8a97"
+  url "https://github.com/navajyoth-puthalath13/Phosphor/archive/bce0921ed00d4e08a57c72e346290cc6768d5ed7.tar.gz"
+  version "0.4.0"
+  sha256 "609a561cd723f6b4c5286848f28f21db47dc26a7696997c546d8f6d526bf840e"
   head "https://github.com/navajyoth-puthalath13/Phosphor.git", branch: "main"
 
   depends_on :macos
