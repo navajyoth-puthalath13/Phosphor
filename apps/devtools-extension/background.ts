@@ -24,7 +24,7 @@ chrome.runtime.onConnect.addListener(port => {
   if (!port.name.startsWith('phosphor-panel:')) return;
   const tabId = Number(port.name.split(':')[1]);
   port.onDisconnect.addListener(() => {
-    chrome.scripting.executeScript({ target: { tabId }, func: removeLive, args: [LIVE_ID] })
+    chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: removeLive, args: [LIVE_ID] }) // MAIN: where the live watcher runs
       .catch(() => { /* tab gone or restricted page: nothing to restore */ });
   });
 });

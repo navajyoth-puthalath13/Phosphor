@@ -62,6 +62,8 @@
         <button type="button" data-preset="office-ips"><svg class="ico"><use href="#i-monitor"/></svg>Office IPS</button>
         <button type="button" data-preset="crt-9300k"><svg class="ico"><use href="#i-monitor"/></svg>CRT</button>
         <button type="button" data-preset="oled-wide-unmanaged"><svg class="ico"><use href="#i-monitor"/></svg>OLED</button>
+        <button type="button" data-preset="mono-lcd"><svg class="ico"><use href="#i-monitor"/></svg>Black &amp; white</button>
+        <button type="button" data-preset="e-paper"><svg class="ico"><use href="#i-monitor"/></svg>E-paper</button>
       </div>
     </section>
   </aside>
@@ -128,6 +130,8 @@
           <div class="ctl-head"><input type="checkbox" id="on-chroma" checked><label for="on-chroma">Chroma</label><span class="tag" data-src="chroma"></span></div>
           <p class="desc">Picture-mode saturation (OKLab chroma).</p>
           <div class="ctl-row"><svg class="ico"><use href="#i-palette"/></svg><input id="chroma" type="range" min="0" max="1.5" step="0.05" aria-label="Chroma"><input id="chroma-num" type="number" min="0" max="3" step="0.05" aria-label="Chroma"><span class="unit">×</span></div>
+          <label class="check"><input id="mono" type="checkbox"> Monochrome (black-and-white) panel
+            <span class="ico info" title="Colour is reduced to one grey value with Rec. 601 luma (0.299 R + 0.587 G + 0.114 B), as monochrome monitors do. Colours with equal luma become the same grey."><svg class="ico"><use href="#i-info"/></svg></span></label>
         </div>
       </div>
 
@@ -187,6 +191,7 @@
         </div>
       </header>
       <p id="sim-status" class="status" role="status" aria-live="polite"></p>
+      <p id="accuracy" class="status" hidden></p>
       <div id="preview-wrap" class="preview" hidden>
         <div class="views">
           <figure class="pane-a"><figcaption><span class="dot blue"></span>Your display (Actual)</figcaption><canvas id="view-a"></canvas></figure>

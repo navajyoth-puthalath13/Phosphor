@@ -92,8 +92,8 @@ export interface TargetDisplayProfile {
   kind: 'target';
   id: string;
   name: string;
-  technology: 'reference' | 'crt' | 'tn-lcd' | 'ips-lcd' | 'va-lcd' | 'oled' | 'custom';
-  backlight?: 'ccfl' | 'w-led' | 'none';
+  technology: 'reference' | 'crt' | 'tn-lcd' | 'ips-lcd' | 'va-lcd' | 'oled' | 'plasma' | 'e-paper' | 'custom';
+  backlight?: 'ccfl' | 'w-led' | 'mini-led' | 'none';
   /** Does the host OS colour-manage content into this display's gamut? Most Windows office setups: no. */
   colourManaged: boolean;
   luminance: Sourced<number>;            // cd/m²
@@ -104,5 +104,7 @@ export interface TargetDisplayProfile {
   bitDepth: Sourced<number>;             // panel bits per component
   dithering: 'none' | 'frc';             // frc = panel uses temporal dithering to fake +2 bits
   chroma: Sourced<number>;               // picture-processing saturation gain, 1 = neutral
+  /** Monochrome panel: the colour signal is reduced to Rec. 601 luma before the panel (absent = colour). */
+  monochrome?: boolean;
   assumptions: string[];
 }

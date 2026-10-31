@@ -15,7 +15,8 @@ import { whiteFitScale, type Params } from './pipeline.ts';
 export type FilterStep =
   | { type: 'table'; values: number[] }   // feComponentTransfer type="table" on sRGB-encoded values
   | { type: 'matrix'; values: number[] }  // feColorMatrix type="matrix", 4×5 row-major, in linearRGB
-  | { type: 'saturate'; value: number };  // feColorMatrix type="saturate" on sRGB-encoded values
+  | { type: 'saturate'; value: number }   // feColorMatrix type="saturate" on sRGB-encoded values
+  | { type: 'luma'; values: number[] };   // feColorMatrix type="matrix" on sRGB-encoded values (monochrome panel)
 
 export interface CompiledFilter { steps: FilterStep[]; approximations: string[] }
 
@@ -37,10 +38,17 @@ export function compileFilter(p: Params): CompiledFilter {
     const toTarget = mmul(inv(rgbToXyz(p.primaries, p.white)), mmul(bradford(xyToXYZ(D65), xyToXYZ(p.white)), rgbToXyz(SRGB, D65)));
     steps.push(matrixStep(toTarget));
     steps.push({ type: 'table', values: sample(256, v => signalToEncodedLight(st.inverseEotf(p.tone, srgbDecode(v)))) });
+    // These act on the target-encoded signal, inside the step fused into the table above.
+    if (p.chroma !== 1) approximations.push('chroma is not applied live when the OS colour-manages the target — use the preview');
+    if (p.monochrome) approximations.push('monochrome is not applied live when the OS colour-manages the target — use the preview');
   } else {
     if (p.chroma !== 1) {
       steps.push({ type: 'saturate', value: round6(p.chroma) });
       approximations.push('chroma uses the browser\'s saturate filter, not OKLab — use Capture for the exact result');
+    }
+    if (p.monochrome) {
+      const [r, g, b] = st.LUMA_601; // exact: luma is linear in the encoded signal
+      steps.push({ type: 'luma', values: [r, g, b, 0, 0, r, g, b, 0, 0, r, g, b, 0, 0, 0, 0, 0, 1, 0] });
     }
     steps.push({ type: 'table', values: sample(256, signalToEncodedLight) });
   }
@@ -70,6 +78,9 @@ export function evaluateFilter(f: CompiledFilter, rgb: Vec3): Vec3 {
     } else if (s.type === 'matrix') {
       const m = s.values, lin = v.map(srgbDecode);
       v = [0, 1, 2].map(r => srgbEncode(clamp(m[5 * r] * lin[0] + m[5 * r + 1] * lin[1] + m[5 * r + 2] * lin[2] + m[5 * r + 4]))) as Vec3;
+    } else if (s.type === 'luma') {
+      const m = s.values;
+      v = [0, 1, 2].map(r => m[5 * r] * v[0] + m[5 * r + 1] * v[1] + m[5 * r + 2] * v[2]) as Vec3;
     } else {
       const a = s.value; // SVG saturate matrix (Filter Effects §9.7)
       const S: Mat3 = [

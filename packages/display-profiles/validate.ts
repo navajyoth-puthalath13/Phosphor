@@ -4,7 +4,7 @@
 import type { Sourced, TargetDisplayProfile, XY } from '../profile-schema/index.ts';
 import { gamutArea } from '../colour-math/index.ts';
 
-const TECH = ['reference', 'crt', 'tn-lcd', 'ips-lcd', 'va-lcd', 'oled', 'custom'];
+const TECH = ['reference', 'crt', 'tn-lcd', 'ips-lcd', 'va-lcd', 'oled', 'plasma', 'e-paper', 'custom'];
 const SOURCES = ['os', 'edid', 'icc', 'standard', 'manufacturer-spec', 'measured', 'user', 'estimated', 'unknown'];
 
 export function validateTarget(input: unknown): TargetDisplayProfile {
@@ -26,6 +26,7 @@ export function validateTarget(input: unknown): TargetDisplayProfile {
   need(TECH.includes(o.technology), `technology: one of ${TECH.join(', ')}`);
   need(typeof o.colourManaged === 'boolean', 'colourManaged: true or false');
   need(o.dithering === 'none' || o.dithering === 'frc', 'dithering: "none" or "frc"');
+  need(o.monochrome === undefined || typeof o.monochrome === 'boolean', 'monochrome: true, false or absent');
   need(Array.isArray(o.assumptions) && o.assumptions.every((a: unknown) => typeof a === 'string'), 'assumptions: list of strings');
   sourced('luminance', v => num(v, 1, 10000), '1–10000 cd/m²');
   sourced('contrastRatio', v => num(v, 1, 1e9), '1–1e9, or null for an ideal black', true);

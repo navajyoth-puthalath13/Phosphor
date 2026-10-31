@@ -77,6 +77,10 @@ reason in [`packages/display-profiles/targets.ts`](packages/display-profiles/tar
 | Office VA monitor | 250 nits, 3000:1 |
 | Wide-gamut OLED, not colour-managed | over-saturates sRGB content |
 | CRT monitor, 9300 K preset | 100 nits, 200:1, gamma 2.5, bluish white |
+| Monochrome (black-and-white) LCD | colour → one grey (Rec. 601 luma): colours of equal luma merge |
+| E-paper (e-ink) | ~72 nits in a 500 lux office, 15:1, 16 grey levels |
+| Plasma display | 120 nits full-white (power limiting), 3000:1 |
+| Mini-LED LCD (colour-managed) | 500 nits, 20 000:1, Display P3 |
 
 Measured a real monitor? Save it as your own profile with its measured values — they're tagged `user`.
 
@@ -94,15 +98,32 @@ phosphor simulate shot.png --target-file my-monitor.json -o out.png
 `--only gamut,contrast` / `--disable luminance`. Screenshots may carry a colour profile (macOS tags them with your
 display's, usually Display P3); Phosphor converts them to sRGB first.
 
-## Chrome Web Store
+## Publishing the extension
 
-Phosphor isn't on the Chrome Web Store yet, which is why setup uses **Load unpacked** — free, fully functional,
-and the normal way to run an extension during development. Publishing needs a Chrome Web Store developer account
-(a one-time US$5 fee), a privacy policy page and Google's review. Once listed, `phosphor setup` opens the store page
-instead and the install becomes one "Add to Chrome" click; nothing else changes. Microsoft Edge Add-ons is a free
-store that runs the same extension.
+Phosphor works today without any store: `phosphor setup` installs it with **Load unpacked** (free, fully functional).
+To make installing a one-click affair:
+
+| Route | Cost | Reaches |
+|---|---|---|
+| Chrome Web Store | one-time US$5 developer registration | Chrome, Brave, Arc, Opera, Edge (Brave has no store of its own) |
+| Microsoft Edge Add-ons | free | Edge |
+| Opera add-ons | free | Opera |
+| Organisation policy (`ExtensionInstallForcelist`) | free | managed Macs/PCs in a hospital, bank or company — IT installs it for everyone |
+| GitHub release `.zip` + Load unpacked | free | anyone, two extra clicks |
+
+Every store needs a privacy policy page and reasons for each permission. Once listed, set `STORE_URL` in
+`apps/cli/setup.ts` and `phosphor setup` opens the store page instead.
 
 ## What's new
+
+**0.4.0**
+- **New displays:** black-and-white (monochrome) LCD, e-paper, plasma and Mini-LED, plus a *Monochrome* switch for any
+  profile. Monochrome uses Rec. 601 luma, so colours that merge into the same grey show up as a real problem.
+- **Live mode fixes found on real sites:** modal dialogs, popovers and full-screen elements are now simulated too; pages
+  that rewrite `<html style>` (theme switchers, hydration) no longer drop the simulation; re-applied while a new page loads.
+- **Live self-check:** *Capture* now compares what live mode put on screen with the exact model and reports the match
+  for the page you're on.
+- Live mode is now checked against the exact model by visible difference (OKLab ΔE) for all 11 displays.
 
 **0.3.0**
 - **Redesigned DevTools panel**: your display, target display and quick presets on the left; display characteristics

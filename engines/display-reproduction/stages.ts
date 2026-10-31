@@ -32,6 +32,11 @@ export function chroma(signal: Vec3, gain: number): Vec3 {
   return clip(oklabToLinearSrgb([L, a * gain, b * gain])).map(srgbEncode) as Vec3;
 }
 
+/** Stage 2b — monochrome panel: one value per pixel from Rec. 601 luma on the encoded signal (ITU-R BT.601),
+ *  the conversion monochrome monitors and grey-scale video use. Unlike OKLab lightness, blue comes out dark. */
+export const LUMA_601 = [0.299, 0.587, 0.114] as const;
+export const luma = (signal: Vec3): Vec3 => { const y = LUMA_601[0] * signal[0] + LUMA_601[1] * signal[1] + LUMA_601[2] * signal[2]; return [y, y, y]; };
+
 /** Stage 3 — panel quantisation. FRC is modelled by its time-average: +2 effective bits. A static
  *  frame cannot show FRC flicker, and drawing spatial noise instead would be a decorative effect. */
 export function quantise(signal: Vec3, bits: number, dithering: 'none' | 'frc'): Vec3 {

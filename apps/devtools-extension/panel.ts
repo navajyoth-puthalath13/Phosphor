@@ -8,6 +8,7 @@ import { TARGETS, NTSC45, SMPTE_C } from '../../packages/display-profiles/target
 import { validateTarget } from '../../packages/display-profiles/validate.ts';
 import { SRGB, DISPLAY_P3, ADOBE_RGB, REC2020, cctFromXY, daylightXY } from '../../packages/colour-math/index.ts';
 import { applyLive, removeLive, LIVE_ID } from './live.ts';
+import { liveAccuracy } from './accuracy.ts';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const tabId = chrome.devtools.inspectedWindow.tabId;
@@ -130,6 +131,7 @@ function render() {
   $<HTMLSelectElement>('bits').value = String(work.bitDepth.value ?? 8);
   $<HTMLInputElement>('frc').checked = work.dithering === 'frc';
   $<HTMLInputElement>('managed').checked = work.colourManaged;
+  $<HTMLInputElement>('mono').checked = !!work.monochrome;
   $('delete').hidden = !custom.some(t => t.id === base.id);
   $('target-notes').querySelector('span')!.textContent = [`${base.technology}${base.backlight ? `, ${base.backlight} backlight` : ''}.`, ...base.assumptions].join(' ');
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-preset]')) b.setAttribute('aria-pressed', String(b.dataset.preset === base.id));
@@ -179,6 +181,7 @@ function wire() {
   on('bits', 'change', el => (work.bitDepth = user(+el.value, 'bits')));
   on('frc', 'change', el => (work.dithering = el.checked ? 'frc' : 'none'));
   on('managed', 'change', el => (work.colourManaged = el.checked));
+  on('mono', 'change', el => (work.monochrome = el.checked));
   on('mode', 'change', el => save({ mode: el.value }));
   on('viewer-nits', 'change', el => { viewerNits = el.value && +el.value > 0 ? +el.value : null; save({ viewerNits }); });
   for (const e of EFFECTS) on(`on-${e}`, 'change', el => (el.checked ? enabled.add(e) : enabled.delete(e)));
@@ -241,7 +244,8 @@ function wire() {
   $('capture').addEventListener('click', capture);
   $('split').addEventListener('input', drawPreview);
   $('fullscreen').addEventListener('click', () => $('preview-wrap').requestFullscreen().catch(() => {}));
-  chrome.devtools.network.onNavigated.addListener(() => { if (live) setTimeout(applyNow, 300); });
+  // A new page needs the simulation again; retry while it loads (applying twice is harmless).
+  chrome.devtools.network.onNavigated.addListener(() => { if (live) for (const ms of [300, 1000, 2500]) setTimeout(applyNow, ms); });
 }
 
 function showTab(name: string) {
@@ -296,19 +300,44 @@ function status(text: string, kind: '' | 'warn' | 'err' = '') {
   const s = $('sim-status'); s.textContent = text; s.className = `status ${kind}`;
 }
 
-async function capture() {
-  status('Capturing…');
-  if (live) { evalInPage(`(${removeLive})(${JSON.stringify(LIVE_ID)})`); await new Promise(r => setTimeout(r, 150)); } // let the page repaint unfiltered
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+/** One capture of the visible tab as sRGB pixels (the browser converts a colour-tagged capture here). */
+async function grab(): Promise<ImageData | string> {
   const r = await chrome.runtime.sendMessage({ type: 'capture', tabId }) as { dataUrl?: string; error?: string };
-  if (live) applyNow();
-  if (!r?.dataUrl) { status(`Capture failed: ${r?.error ?? 'no image'}. Click the page once, then press Capture.`, 'err'); return; }
+  if (!r?.dataUrl) return r?.error ?? 'no image';
   const img = new Image(); img.src = r.dataUrl; await img.decode();
   const c = new OffscreenCanvas(img.naturalWidth, img.naturalHeight);
-  const ctx = c.getContext('2d', { colorSpace: 'srgb' })!; // the browser converts a tagged capture to sRGB here
+  const ctx = c.getContext('2d', { colorSpace: 'srgb' })!;
   ctx.drawImage(img, 0, 0);
-  original = ctx.getImageData(0, 0, c.width, c.height, { colorSpace: 'srgb' });
+  return ctx.getImageData(0, 0, c.width, c.height, { colorSpace: 'srgb' });
+}
+
+async function capture() {
+  status('Capturing…');
+  if (live) { evalInPage(`(${removeLive})(${JSON.stringify(LIVE_ID)})`); await sleep(150); } // let the page repaint unfiltered
+  const shot = await grab();
+  if (live) applyNow();
+  if (typeof shot === 'string') { status(`Capture failed: ${shot}. Click the page once, then press Capture.`, 'err'); return; }
+  original = shot;
   $('preview-wrap').hidden = false;
   simulatePreview();
+  if (live) await checkLiveAccuracy();
+}
+
+/** Captures the page as live mode actually renders it and compares that with the exact model. */
+async function checkLiveAccuracy() {
+  const out = $('accuracy');
+  await sleep(700); // Chrome allows two captures per second, and the filter needs a frame to paint
+  const shot = await grab();
+  if (typeof shot === 'string' || !original || !simulated || shot.width !== original.width || shot.height !== original.height) { out.hidden = true; return; }
+  const a = liveAccuracy(original.data, simulated.data, shot.data, shot.width);
+  const pct = (a.within2 * 100).toFixed(1);
+  out.hidden = false;
+  out.className = `status ${a.within2 >= 0.98 ? '' : 'warn'}`;
+  out.textContent = a.within2 >= 0.98
+    ? `Live check on this page: ${pct}% of pixels within 2/255 of the exact model (worst ${a.max}).`
+    : `Live check on this page: only ${pct}% of pixels within 2/255 of the exact model (worst ${a.max}). Trust the preview here, and please report this page.`;
 }
 
 function simulatePreview() {

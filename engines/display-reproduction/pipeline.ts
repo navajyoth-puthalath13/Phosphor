@@ -40,6 +40,7 @@ export function resolveParams(t: TargetDisplayProfile, ctx: ViewerContext, enabl
     bits: on('bitDepth') ? t.bitDepth.value ?? 8 : 8,
     dithering: on('bitDepth') ? t.dithering : 'none' as const,
     chroma: on('chroma') ? t.chroma.value ?? 1 : 1,
+    monochrome: on('chroma') && !!t.monochrome, // a monochrome panel is the extreme of chroma loss
     mode: ctx.mode,
   };
   return { p, warnings };
@@ -64,6 +65,7 @@ export function makeColourTransform(p: Params) {
     let s: Vec3 = [r / 255, g / 255, b / 255];
     if (p.colourManaged) s = st.osColourManagement(s, p.primaries, p.white, p.tone);
     s = st.chroma(s, p.chroma);
+    if (p.monochrome) s = st.luma(s);
     s = st.quantise(s, p.bits, p.dithering);
     const xyz = st.panelColorimetry(st.toneResponse(s, p.tone), m);
     const abs = st.luminanceAndBlack(xyz, whiteXYZ, p.peak, p.contrast);

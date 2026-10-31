@@ -9,6 +9,9 @@ export const LIVE_ID = 'phosphor-live';
 export function applyLive(steps: FilterStep[], id: string): void {
   const NS = 'http://www.w3.org/2000/svg';
   const root = document.documentElement;
+  const url = `url(#${id}-filter)`;
+  const state = ((window as any).__phosphorLive ??= {}) as { sheet?: CSSStyleSheet; observer?: MutationObserver; host?: HTMLElement };
+
   let host = document.getElementById(id);
   if (!host) {
     host = document.createElement('div');
@@ -19,6 +22,7 @@ export function applyLive(steps: FilterStep[], id: string): void {
     host.dataset.minHeight = root.style.getPropertyValue('min-height');
     root.appendChild(host);
   }
+  state.host = host;
   const el = (tag: string, attrs: Record<string, string>) => {
     const e = document.createElementNS(NS, tag);
     for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
@@ -31,19 +35,40 @@ export function applyLive(steps: FilterStep[], id: string): void {
       const ct = el('feComponentTransfer', {});
       for (const c of ['R', 'G', 'B']) ct.appendChild(el(`feFunc${c}`, { type: 'table', tableValues: s.values.join(' ') }));
       filter.appendChild(ct);
-    } else if (s.type === 'matrix') {
-      filter.appendChild(el('feColorMatrix', { type: 'matrix', 'color-interpolation-filters': 'linearRGB', values: s.values.join(' ') }));
+    } else if (s.type === 'matrix' || s.type === 'luma') {
+      // 'matrix' acts on linear light; 'luma' on the encoded signal, as a monochrome monitor's conversion does.
+      filter.appendChild(el('feColorMatrix', { type: 'matrix', 'color-interpolation-filters': s.type === 'matrix' ? 'linearRGB' : 'sRGB', values: s.values.join(' ') }));
     } else {
       filter.appendChild(el('feColorMatrix', { type: 'saturate', values: String(s.value) }));
     }
   }
   svg.appendChild(filter);
   host.replaceChildren(svg);
-  root.style.setProperty('filter', `url(#${id}-filter)`, 'important');
-  root.style.setProperty('min-height', '100vh'); // a filtered root stops painting its background below short pages
+
+  const assert = () => {
+    if (!state.host!.isConnected) root.appendChild(state.host!);
+    if (root.style.getPropertyValue('filter') !== url) root.style.setProperty('filter', url, 'important');
+    if (root.style.getPropertyValue('min-height') !== '100vh') root.style.setProperty('min-height', '100vh'); // short pages keep their background inside the filter
+  };
+  assert();
+
+  // Modal dialogs, popovers and full-screen elements render in the top layer, outside <html>'s filter.
+  // A constructed stylesheet reaches them and, unlike a <style> tag, is not blocked by a page's CSP.
+  if (!state.sheet) { state.sheet = new CSSStyleSheet(); document.adoptedStyleSheets = [...document.adoptedStyleSheets, state.sheet]; }
+  state.sheet.replaceSync(`:modal, :popover-open, :fullscreen, ::backdrop { filter: ${url} !important; }`);
+
+  // Pages that rewrite <html style> (theme switchers, framework hydration) would silently drop the simulation.
+  if (!state.observer) {
+    state.observer = new MutationObserver(assert);
+    state.observer.observe(root, { attributes: true, attributeFilter: ['style'], childList: true });
+  }
 }
 
 export function removeLive(id: string): void {
+  const state = (window as any).__phosphorLive as { sheet?: CSSStyleSheet; observer?: MutationObserver } | undefined;
+  state?.observer?.disconnect();
+  if (state?.sheet) document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== state.sheet);
+  delete (window as any).__phosphorLive;
   const host = document.getElementById(id);
   if (!host) return;
   const root = document.documentElement;

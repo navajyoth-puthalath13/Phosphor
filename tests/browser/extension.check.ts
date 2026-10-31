@@ -79,6 +79,16 @@ const filter = await target.evaluate(() => document.documentElement.style.getPro
 assert(/url\("?#phosphor-live-filter"?\)/.test(filter), 'live mode applies the filter to the inspected page');
 if (shots) await target.screenshot({ path: join(shots, 'live-budget-tn.png') });
 
+// Real sites: a theme switcher rewriting <html style>, and modal dialogs in the top layer.
+await target.evaluate(() => document.documentElement.setAttribute('style', 'color-scheme: light'));
+await new Promise(r => setTimeout(r, 200));
+assert(/phosphor-live-filter/.test(await target.evaluate(() => document.documentElement.style.getPropertyValue('filter'))), 'survives a page rewriting <html style>');
+const dialogFilter = await target.evaluate(() => {
+  const d = document.createElement('dialog'); d.textContent = 'modal'; document.body.append(d); d.showModal();
+  const f = getComputedStyle(d).filter; d.close(); d.remove(); return f;
+});
+assert(/phosphor-live-filter/.test(dialogFilter), 'modal dialogs (top layer) are simulated too');
+
 await panel.fill('#contrast', '2'); await panel.dispatchEvent('#contrast', 'input'); // 100:1
 assert(await panel.inputValue('#contrast-num') === '100', 'contrast slider updates its number field');
 await panel.fill('#luminance-num', '150'); await panel.dispatchEvent('#luminance-num', 'change');
@@ -97,6 +107,15 @@ assert(!(await panel.isHidden('#preview-wrap')), 'the preview fills in automatic
 await panel.click('#capture');
 await panel.waitForFunction(() => /^Preview \d+×\d+/.test(document.getElementById('sim-status')!.textContent!), null, { timeout: 20000 });
 assert(true, 'Capture refreshes the original/simulated preview');
+await panel.waitForFunction(() => /Live check on this page/.test(document.getElementById('accuracy')!.textContent!), null, { timeout: 20000 });
+const acc = (await panel.textContent('#accuracy'))!;
+console.log(`  ${acc}`);
+assert(/: (9[89]|100)\.\d% of pixels/.test(acc), 'live self-check: ≥98% of pixels match the exact model in Chromium');
+await panel.click('[data-preset="mono-lcd"]');
+await new Promise(r => setTimeout(r, 300));
+assert(await panel.isChecked('#mono') && await target.evaluate(() => !!document.querySelector('#phosphor-live feColorMatrix[color-interpolation-filters="sRGB"]')),
+  'black-and-white preset turns the page monochrome');
+await panel.selectOption('#target', 'budget-tn');
 
 panel.once('dialog', (d: any) => d.accept('Ward 4B monitor'));
 await panel.click('#save');
