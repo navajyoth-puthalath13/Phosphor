@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compileFilter, evaluateFilter, filterSvg } from './filter.ts';
+import { compileFilter, evaluateFilter } from './filter.ts';
 import { resolveParams, makeColourTransform, EFFECTS, type Effect } from './pipeline.ts';
 import { TARGETS } from '../../packages/display-profiles/targets.ts';
 import type { Vec3 } from '../../packages/colour-math/index.ts';
@@ -40,13 +40,10 @@ describe('live filter = CPU engine (same model, compiled)', () => {
     expect(max).toBe(0);
   });
 
-  it('flags its approximations and emits well-formed SVG', () => {
+  it('flags its approximations', () => {
     const t = { ...TARGETS[0], chroma: { value: 0.6, source: 'user' as const, confidence: 'high' as const } };
     const f = compileFilter(resolveParams(t, { whiteNits: null, mode: 'absolute' }).p);
     expect(f.approximations.join()).toMatch(/saturate/);
-    const svg = filterSvg(f, 'phosphor-sim');
-    expect(svg).toMatch(/^<svg[^>]*><filter id="phosphor-sim" color-interpolation-filters="sRGB"/);
-    expect(svg.match(/<feComponentTransfer>/g)!.length).toBe(1);
-    expect(svg).toMatch(/<feColorMatrix color-interpolation-filters="linearRGB"/);
+    expect(f.steps.map(s => s.type)).toEqual(['saturate', 'table', 'matrix']);
   });
 });

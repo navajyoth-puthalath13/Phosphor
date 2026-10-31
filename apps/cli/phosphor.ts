@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // phosphor CLI. Commands: detect, profiles, simulate
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { buildSourceProfiles, type HelperReport } from '../../engines/display-detection/build-profile.ts';
@@ -9,6 +11,7 @@ import type { Sourced, SourceDisplayProfile } from '../../packages/profile-schem
 import { simulate, EFFECTS, type Effect } from '../../engines/display-reproduction/pipeline.ts';
 import { TARGETS, getTarget } from '../../packages/display-profiles/targets.ts';
 import { validateTarget } from '../../packages/display-profiles/validate.ts';
+import { runSetup, doctor, serveNativeMessages, stateDir, STORE_URL, GUIDE } from './setup.ts';
 import { PNG } from 'pngjs';
 import { parseIcc, iccFromPng } from '../../packages/icc/index.ts';
 import { contentToSrgb, isSrgbLike } from '../../engines/display-reproduction/content.ts';
@@ -19,7 +22,7 @@ const HELPER_BUILD = fileURLToPath(new URL('native/macos-helper/build/phosphor-h
 
 function readHelperReport(from?: string): HelperReport {
   if (from) return JSON.parse(readFileSync(from, 'utf8'));
-  if (process.platform !== 'darwin') throw new Error('display detection needs macOS (or pass --from <helper-report.json>)');
+  if (process.platform !== 'darwin' && !process.env.PHOSPHOR_HELPER) throw new Error('display detection needs macOS (or pass --from <helper-report.json>)');
   const helper = process.env.PHOSPHOR_HELPER ?? (existsSync(HELPER_BUILD) ? HELPER_BUILD : 'phosphor-helper');
   try { return JSON.parse(execFileSync(helper, { encoding: 'utf8' })); }
   catch (e) { throw new Error(`could not run the native helper (${helper}). Build it with native/macos-helper/build.sh\n${(e as Error).message}`); }
@@ -79,8 +82,64 @@ function toSrgbContent(bytes: Uint8Array, pixels: Uint8Array) {
   }
 }
 
+const VERSION: string = JSON.parse(readFileSync(new URL('package.json', ROOT), 'utf8')).version;
+
+function setup(args: string[]) {
+  const { values } = parseArgs({ args, options: { 'no-open': { type: 'boolean' } } });
+  const mac = process.platform === 'darwin' && !values['no-open'];
+  console.log(`Phosphor ${VERSION} setup\n`);
+  try {
+    const n = readHelperReport().displays.length;
+    console.log(`✓ Display helper works (${n} display${n === 1 ? '' : 's'} found)`);
+  } catch (e) { console.log(`! Display helper not available: ${(e as Error).message.split('\n')[0]}\n  The panel still works; it just can't show your display's details.`); }
+
+  const r = runSetup({ home: homedir(), cliPath: fileURLToPath(import.meta.url), nodePath: process.execPath, extensionSrc: fileURLToPath(new URL('dist/extension', ROOT)) });
+  console.log(r.registered.length ? `✓ Connected the helper to: ${r.registered.join(', ')}` : '✗ No Chromium browser found (Chrome, Edge, Brave, Arc, Chromium). Install one, then run `phosphor setup` again.');
+
+  console.log('\nInstall the browser extension (your browser asks you to confirm — nothing installs silently):');
+  if (STORE_URL) {
+    console.log(`  Opening the Chrome Web Store: ${STORE_URL}\n  Click "Add to Chrome".`);
+    if (mac) execFileSync('open', [STORE_URL]);
+  } else {
+    console.log([
+      '  Phosphor isn\'t on the Chrome Web Store yet, so use "Load unpacked" (free, one time):',
+      '    1. Open chrome://extensions in Chrome',
+      '    2. Turn on "Developer mode" (top right)',
+      '    3. Click "Load unpacked" and choose this folder:',
+      `         ${r.extensionDir}`,
+      mac ? '       (path copied — in the folder picker press ⌘⇧G, paste, Return)' : '',
+      `  Extension ID: ${r.extensionId}`,
+    ].filter(Boolean).join('\n'));
+    if (mac) {
+      try { execFileSync('pbcopy', { input: r.extensionDir }); } catch { /* clipboard is a convenience */ }
+      try { execFileSync('open', ['-a', 'Google Chrome', 'chrome://extensions']); } catch { /* Chrome may not be installed */ }
+    }
+  }
+  console.log(GUIDE);
+  console.log('Check everything with: phosphor doctor\nAfter upgrading Phosphor, run `phosphor setup` again.');
+}
+
 function main(argv: string[]) {
   const [cmd, ...rest] = argv;
+  if (cmd === 'native-host') {
+    // stdout belongs to the browser here: never console.log in this branch.
+    const dir = stateDir(homedir()); mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'last-connected.json'), JSON.stringify({ time: new Date().toISOString(), origin: rest[0] ?? null }));
+    serveNativeMessages(process.stdin, process.stdout, msg => {
+      if (msg?.type === 'ping') return { ok: true, version: VERSION };
+      if (msg?.type === 'detect') return { profiles: buildSourceProfiles(readHelperReport()) };
+      return { error: `unknown request "${msg?.type}"` };
+    });
+    return;
+  }
+  if (cmd === 'setup') return setup(rest);
+  if (cmd === 'doctor') {
+    const r = doctor(homedir());
+    console.log(r.lines.join('\n'));
+    if (!r.ok) process.exitCode = 1;
+    return;
+  }
+  if (cmd === 'guide') { console.log(GUIDE); return; }
   if (cmd === 'detect') {
     const { values } = parseArgs({ args: rest, options: { json: { type: 'boolean' }, from: { type: 'string' } } });
     const profiles = buildSourceProfiles(readHelperReport(values.from));
@@ -123,7 +182,11 @@ function main(argv: string[]) {
     return;
   }
   console.log([
+    `Phosphor ${VERSION}`,
     'usage:',
+    '  phosphor setup                        connect your browser and install the DevTools extension',
+    '  phosphor doctor                       check the setup',
+    '  phosphor guide                        what each control in the DevTools panel does',
     '  phosphor detect [--json] [--from helper-report.json]',
     '  phosphor profiles [--export <id>]       export a profile as JSON to edit into your own',
     '  phosphor simulate <in.png> (-t <target> | --target-file my.json) -o <out.png> [--viewer-nits N] [--mode absolute|adapted]',

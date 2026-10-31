@@ -9,7 +9,15 @@
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node",
+      "chrome"
+    ]
   },
-  "include": ["apps", "engines", "packages", "tests"]
+  "include": [
+    "apps",
+    "engines",
+    "packages",
+    "tests"
+  ]
 }

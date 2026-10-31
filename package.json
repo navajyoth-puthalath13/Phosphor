@@ -11,16 +11,19 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node -e \"require('fs').chmodSync('dist/apps/cli/phosphor.js', 0o755)\"",
+    "build": "tsc -p tsconfig.build.json && node -e \"require('fs').chmodSync('dist/apps/cli/phosphor.js', 0o755)\" && npm run build:extension",
     "prepare": "npm run build",
     "test": "vitest run",
     "typecheck": "tsc",
-    "cli": "node apps/cli/phosphor.ts"
+    "cli": "node apps/cli/phosphor.ts",
+    "build:extension": "tsc -p tsconfig.extension.json && node -e \"require('fs').cpSync('apps/devtools-extension/static', 'dist/extension', { recursive: true })\"",
+    "check:browser": "npm run build && node tests/browser/live-filter.check.ts && node tests/browser/extension.check.ts"
   },
   "dependencies": {
     "pngjs": "^7.0.0"
   },
   "devDependencies": {
+    "@types/chrome": "^0.1.43",
     "@types/node": "^22.0.0",
     "@types/pngjs": "^6.0.5",
     "typescript": "~5.9.0",

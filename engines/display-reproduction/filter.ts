@@ -57,18 +57,6 @@ export function compileFilter(p: Params): CompiledFilter {
   return { steps, approximations };
 }
 
-/** The SVG markup for a compiled filter (one <filter> with the given id). */
-export function filterSvg(f: CompiledFilter, id: string): string {
-  const body = f.steps.map(s => {
-    if (s.type === 'saturate') return `<feColorMatrix type="saturate" values="${s.value}"/>`;
-    if (s.type === 'matrix') return `<feColorMatrix color-interpolation-filters="linearRGB" type="matrix" values="${s.values.join(' ')}"/>`;
-    const t = s.values.join(' ');
-    return `<feComponentTransfer><feFuncR type="table" tableValues="${t}"/><feFuncG type="table" tableValues="${t}"/><feFuncB type="table" tableValues="${t}"/></feComponentTransfer>`;
-  }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true">`
-    + `<filter id="${id}" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">${body}</filter></svg>`;
-}
-
 /** Reference evaluator with browser semantics: 8-bit values between primitives, 8-bit table lookup,
  *  linearRGB primitives decoded/re-encoded by the browser. Used by tests to predict what Chrome renders. */
 export function evaluateFilter(f: CompiledFilter, rgb: Vec3): Vec3 {

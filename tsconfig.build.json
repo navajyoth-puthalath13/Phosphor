@@ -1,9 +1,20 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false, "outDir": "dist", "rootDir": ".", "rewriteRelativeImportExtensions": true,
-    "noCheck": true, "types": []
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": ".",
+    "rewriteRelativeImportExtensions": true,
+    "noCheck": true,
+    "types": []
   },
-  "include": ["apps", "engines", "packages"],
-  "exclude": ["**/*.test.ts"]
+  "include": [
+    "apps",
+    "engines",
+    "packages"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "apps/devtools-extension/**"
+  ]
 }

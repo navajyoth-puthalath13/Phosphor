@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Phosphor</title>
+<link rel="stylesheet" href="panel.css">
+<body>
+<main>
+  <div class="col">
+  <section aria-labelledby="h-source">
+    <h2 id="h-source">Your display</h2>
+    <p id="source-status" class="status">Detecting…</p>
+    <dl id="source-facts" class="facts"></dl>
+    <div class="row">
+      <label for="viewer-nits">Your display's brightness</label>
+      <input id="viewer-nits" type="number" min="20" max="2000" step="10" placeholder="unknown" inputmode="numeric">
+      <span class="unit">cd/m²</span>
+    </div>
+    <p class="hint">Software can't read brightness. Without it, brightness differences aren't simulated; everything else is.</p>
+  </section>
+
+  <section aria-labelledby="h-target">
+    <h2 id="h-target">Target display</h2>
+    <div class="row">
+      <label for="target">Display</label>
+      <select id="target"></select>
+    </div>
+    <p id="target-notes" class="hint"></p>
+  </section>
+  </div>
+
+  <section aria-labelledby="h-repro">
+    <h2 id="h-repro">Reproduction</h2>
+    <p class="hint">Untick a characteristic to see the page without that limitation.</p>
+    <div class="ctl" data-effect="luminance">
+      <input type="checkbox" id="on-luminance" checked aria-label="Simulate luminance">
+      <label for="luminance">Luminance</label>
+      <input id="luminance" type="range" min="50" max="1000" step="5">
+      <output for="luminance" id="luminance-out"></output>
+    </div>
+    <div class="ctl" data-effect="contrast">
+      <input type="checkbox" id="on-contrast" checked aria-label="Simulate contrast">
+      <label for="contrast">Contrast ratio</label>
+      <input id="contrast" type="range" min="1.7" max="6" step="0.01">
+      <output for="contrast" id="contrast-out"></output>
+    </div>
+    <div class="ctl" data-effect="gamut">
+      <input type="checkbox" id="on-gamut" checked aria-label="Simulate colour gamut">
+      <label for="gamut">Colour gamut</label>
+      <select id="gamut">
+        <option value="srgb">sRGB</option>
+        <option value="p3">Display P3</option>
+        <option value="adobe">Adobe RGB</option>
+        <option value="rec2020">Rec. 2020</option>
+        <option value="ntsc45">45% NTSC (budget)</option>
+        <option value="smptec">SMPTE-C (CRT/CCFL)</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <output id="gamut-out"></output>
+    </div>
+    <fieldset id="gamut-custom" class="xy" hidden>
+      <legend>Primaries (CIE xy)</legend>
+      <label>R x <input data-p="red.x" type="number" step="0.001" min="0" max="1"></label>
+      <label>y <input data-p="red.y" type="number" step="0.001" min="0" max="1"></label>
+      <label>G x <input data-p="green.x" type="number" step="0.001" min="0" max="1"></label>
+      <label>y <input data-p="green.y" type="number" step="0.001" min="0" max="1"></label>
+      <label>B x <input data-p="blue.x" type="number" step="0.001" min="0" max="1"></label>
+      <label>y <input data-p="blue.y" type="number" step="0.001" min="0" max="1"></label>
+    </fieldset>
+    <div class="ctl" data-effect="gamma">
+      <input type="checkbox" id="on-gamma" checked aria-label="Simulate tone response">
+      <label for="gamma">Gamma</label>
+      <input id="gamma" type="range" min="1.8" max="2.8" step="0.05">
+      <output for="gamma" id="gamma-out"></output>
+    </div>
+    <div class="ctl sub">
+      <span></span>
+      <label class="wide small"><input id="srgb-curve" type="checkbox"> Use the sRGB curve instead of a power law</label>
+    </div>
+    <div class="ctl" data-effect="whitePoint">
+      <input type="checkbox" id="on-whitePoint" checked aria-label="Simulate white point">
+      <label for="white">White point</label>
+      <input id="white" type="range" min="5000" max="10000" step="100">
+      <output for="white" id="white-out"></output>
+    </div>
+    <div class="ctl" data-effect="bitDepth">
+      <input type="checkbox" id="on-bitDepth" checked aria-label="Simulate colour depth">
+      <label for="bits">Colour depth</label>
+      <span class="inline">
+        <select id="bits"><option value="6">6-bit</option><option value="8">8-bit</option><option value="10">10-bit</option></select>
+        <label class="small"><input id="frc" type="checkbox"> FRC</label>
+      </span>
+      <output id="bits-out"></output>
+    </div>
+    <div class="ctl" data-effect="chroma">
+      <input type="checkbox" id="on-chroma" checked aria-label="Simulate chroma">
+      <label for="chroma">Chroma</label>
+      <input id="chroma" type="range" min="0" max="1.5" step="0.05">
+      <output for="chroma" id="chroma-out"></output>
+    </div>
+    <details>
+      <summary>Advanced</summary>
+      <div class="row">
+        <label for="managed">OS colour-manages this display</label>
+        <input id="managed" type="checkbox">
+      </div>
+      <div class="row">
+        <label for="mode">Viewing</label>
+        <select id="mode">
+          <option value="absolute">Side by side (absolute)</option>
+          <option value="adapted">Eye adapted to the target (adapted)</option>
+        </select>
+      </div>
+    </details>
+    <div class="buttons">
+      <button id="reset" type="button">Reset to profile</button>
+      <button id="save" type="button">Save as my profile…</button>
+      <button id="delete" type="button" hidden>Delete my profile</button>
+      <button id="export" type="button">Export JSON</button>
+      <label class="button" for="import">Import JSON</label>
+      <input id="import" type="file" accept="application/json,.json" hidden>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-sim">
+    <h2 id="h-sim">Simulation</h2>
+    <div class="buttons">
+      <label class="switch"><input id="live" type="checkbox"> Live on page</label>
+      <button id="hold" type="button" disabled title="Hold to see the original page">Hold to compare</button>
+      <button id="capture" type="button">Capture preview</button>
+    </div>
+    <p id="sim-status" class="status" role="status" aria-live="polite"></p>
+    <figure id="preview-wrap" hidden>
+      <canvas id="preview"></canvas>
+      <label class="split">Original ◀ <input id="split" type="range" min="0" max="100" value="50" aria-label="Compare original and simulated"> ▶ Simulated</label>
+      <figcaption class="hint">Captured preview: exact model including OKLCh gamut mapping. Live mode is GPU-accelerated and matches it within ~1/255 except where noted.</figcaption>
+    </figure>
+  </section>
+</main>
+<script type="module" src="apps/devtools-extension/panel.js"></script>
+</body>
+</html>

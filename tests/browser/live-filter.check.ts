@@ -2,7 +2,8 @@
 // Run: node tests/browser/live-filter.check.ts   (needs Playwright + Chromium; not part of `npm test`)
 import { createRequire } from 'node:module';
 import { PNG } from 'pngjs';
-import { compileFilter, filterSvg } from '../../engines/display-reproduction/filter.ts';
+import { compileFilter } from '../../engines/display-reproduction/filter.ts';
+import { applyLive } from '../../apps/devtools-extension/live.ts';
 import { resolveParams, simulate } from '../../engines/display-reproduction/pipeline.ts';
 import { TARGETS } from '../../packages/display-profiles/targets.ts';
 
@@ -15,13 +16,7 @@ const ctx = { whiteNits: 400, mode: 'absolute' as const };
 let failed = false;
 for (const t of TARGETS) {
   const f = compileFilter(resolveParams(t, ctx).p);
-  await page.evaluate((svg: string) => {
-    document.getElementById('phosphor-live')?.remove();
-    const host = document.createElement('div'); host.id = 'phosphor-live'; host.innerHTML = svg;
-    document.documentElement.appendChild(host);
-    document.documentElement.style.filter = 'url(#phosphor-sim)';
-    document.documentElement.style.minHeight = '100vh'; // keep the propagated page background inside the filter
-  }, filterSvg(f, 'phosphor-sim'));
+  await page.evaluate(`(${applyLive})(${JSON.stringify(f.steps)}, 'phosphor-live')`); // exactly what the panel runs
   const live = PNG.sync.read(await page.screenshot());
   const cpu = simulate(original.data, t, ctx).data;
   let diffs: number[] = [];

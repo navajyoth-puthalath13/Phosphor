@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false, "outDir": "dist/extension", "rootDir": ".", "rewriteRelativeImportExtensions": true,
+    "noCheck": true, "types": []
+  },
+  "include": ["apps/devtools-extension/*.ts"],
+  "exclude": ["**/*.test.ts"]
+}

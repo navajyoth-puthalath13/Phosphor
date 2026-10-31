@@ -13,8 +13,8 @@ const nits = 'cd/m²', xy = 'CIE 1931 xy';
 const gamma22 = { type: 'gamma' as const, gamma: 2.2 };
 
 // Typical "45% NTSC" W-LED TN laptop/office panel primaries, rounded from common datasheet values.
-const NTSC45: Primaries = { red: { x: 0.58, y: 0.34 }, green: { x: 0.33, y: 0.555 }, blue: { x: 0.155, y: 0.12 } };
-const SMPTE_C: Primaries = { red: { x: 0.63, y: 0.34 }, green: { x: 0.31, y: 0.595 }, blue: { x: 0.155, y: 0.07 } };
+export const NTSC45: Primaries = { red: { x: 0.58, y: 0.34 }, green: { x: 0.33, y: 0.555 }, blue: { x: 0.155, y: 0.12 } };
+export const SMPTE_C: Primaries = { red: { x: 0.63, y: 0.34 }, green: { x: 0.31, y: 0.595 }, blue: { x: 0.155, y: 0.07 } };
 const cool = (k: number): XY => daylightXY(k);
 
 export const TARGETS: TargetDisplayProfile[] = [

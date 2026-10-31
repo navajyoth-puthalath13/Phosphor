@@ -17,7 +17,7 @@ export interface ViewerContext {
   mode: 'absolute' | 'adapted';
 }
 
-export interface SimulationResult { data: Uint8ClampedArray; outOfGamutPixels: number; warnings: string[] }
+export interface SimulationResult { data: Uint8ClampedArray<ArrayBuffer>; outOfGamutPixels: number; warnings: string[] }
 
 /** Resolved physical parameters. A disabled effect falls back to the ideal sRGB reference display. */
 export function resolveParams(t: TargetDisplayProfile, ctx: ViewerContext, enabled: ReadonlySet<Effect> = new Set(EFFECTS)) {
