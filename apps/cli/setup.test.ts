@@ -73,7 +73,7 @@ describe('native host (Chrome native messaging protocol)', () => {
   it('answers ping and detect, and records that the extension connected', async () => {
     const home = fakeHome();
     const [ping, detect, bad] = await talk(home, [{ type: 'ping' }, { type: 'detect' }, { type: 'nope' }]);
-    expect(ping).toMatchObject({ ok: true, version: '0.1.0' });
+    expect(ping).toMatchObject({ ok: true, version: JSON.parse(readFileSync(here('../../package.json'), 'utf8')).version });
     expect(detect.profiles[0].identity.name.value).toBe('Built-in Retina Display');
     expect(detect.profiles[0].characteristics.whitePoint.value.x).toBeCloseTo(0.3127, 3);
     expect(bad.error).toMatch(/unknown request/);

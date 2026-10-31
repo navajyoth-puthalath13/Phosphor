@@ -26,8 +26,19 @@ class Phosphor < Formula
                                             PATH: "#{Formula["node"].opt_bin}:$PATH"
   end
 
+  def caveats
+    <<~EOS
+      Connect your browser and install the Phosphor DevTools extension:
+        phosphor setup
+      Then open DevTools on any page and choose the "Phosphor" tab.
+      Run `phosphor setup` again after `brew upgrade phosphor`.
+    EOS
+  end
+
   test do
     assert_match "budget-tn", shell_output("#{bin}/phosphor profiles")
+    assert_match "Live on page", shell_output("#{bin}/phosphor guide")
+    assert_path_exists libexec/"dist/extension/manifest.json"
 
     # 2×1 PNG: white and dark grey. A budget TN viewed on a 400-nit display must dim the white.
     png = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAD0lEQVR4AWP4DwQiIiL/ARuiBTif3Mi/AAAAAElFTkSuQmCC"

@@ -28,6 +28,15 @@ white → depth → chroma). That order is not how a display works — e.g. quan
 drive signal *before* the panel's tone curve — so the code follows signal flow. Every stage is still a
 separate pure function with its own tests (`stages.test.ts`).
 
+## Live mode
+
+The DevTools panel's *Live on page* compiles the same resolved parameters into an SVG filter on the page's root
+element (`engines/display-reproduction/filter.ts`): one table per channel for stages 2–4 on sRGB-encoded values, and
+one colour matrix in linearRGB for stages 5–7 plus the white fit (they are all linear in light, so they fold into a
+single affine map). Measured in Chromium against the CPU engine on the clinical page: 99–100% of flat-area pixels within
+2/255 (`tests/browser/live-filter.check.ts`). Two approximations, reported in the panel: colours outside sRGB are
+clipped instead of OKLCh-mapped, and a non-neutral chroma uses the browser's saturate filter.
+
 ## Disabling an effect
 
 Turning an effect off substitutes the ideal sRGB reference value (sRGB primaries, D65, sRGB curve,

@@ -1,7 +1,8 @@
 # Architecture & decisions
 
 ```
-apps/cli/phosphor.ts          detect · profiles · simulate
+apps/cli/phosphor.ts                detect · profiles · simulate · setup · doctor · guide · native-host
+apps/devtools-extension/            DevTools panel, background worker (native messaging, capture), live layer
 engines/display-detection/          Engine 1 — raw facts → SourceDisplayProfile (edid.ts, build-profile.ts)
 engines/display-reproduction/       Engine 2 — pixels + TargetDisplayProfile + ViewerContext → pixels (content.ts, stages.ts, pipeline.ts)
 packages/profile-schema/            the only contract between the engines (types + provenance)
@@ -43,17 +44,27 @@ Dependency rule: engines import `packages/*` only, never each other. Engine 2 ne
 |---|---|
 | 1 Native detection | Verified on a MacBook Air (built-in panel, ICC v2 "Display" profile). External-monitor EDID path not yet run on hardware. |
 | 2 Source profile | Done, tested |
-| 3 Reproduction engine | Done for screenshots (PNG), tested per stage and end-to-end |
-| 4 Target profiles | 7 generic profiles with sources; custom-profile save/load not yet |
-| 5 DevTools panel | Not started |
-| 6 Live reproduction | Not started |
-| 7 Homebrew | Formula in `Formula/` (tap this repo by URL). Native Messaging / `setup` not started. |
+| 3 Reproduction engine | Done, tested per stage and end to end |
+| 4 Target profiles | 7 generic profiles; custom profiles (panel save/export/import, CLI `--target-file`) with validation. Specific monitor models need datasheet/measured data. |
+| 5 DevTools panel | Done; end-to-end check in Chromium (`tests/browser/extension.check.ts`). Not yet tried in a real DevTools window on a Mac. |
+| 6 Live reproduction | Done: model compiled to an SVG filter on the root element; 99–100% of pixels within 2/255 of the CPU engine in Chromium. |
+| 7 Homebrew + setup | Formula with caveats; `phosphor setup` registers native messaging and guides Load unpacked. Chrome Web Store listing pending. |
+
+## Decisions added in 0.2.0
+
+8. **Live mode = the model compiled to a filter graph**, not an approximation: per-channel tables (quantise + tone
+   response, on sRGB-encoded values) and one linearRGB colour matrix (primaries, white, luminance, black, viewer).
+   Browsers keep 8 bits between filter primitives, so linear light is never stored between steps.
+   Filter on `<html>` (exempt from the fixed-position containing-block rule) with `min-height: 100vh` so short pages
+   keep their background inside the filter. Built with DOM APIs for Trusted Types pages; restores the page's own styles.
+9. **Fixed extension ID** from a public key in the manifest (no private key exists), so the native host can name it.
+10. **Setup copies the extension to `~/Library/Application Support/Phosphor/chrome-extension`** so a Load-unpacked
+    install survives `brew upgrade`; the native host wrapper pins Homebrew `opt/` paths for the same reason.
 
 ## Next steps
 
-1. Build and run the helper on real Macs (built-in panel, external HDMI/DP monitor) and add their reports to `tests/fixtures/`.
-2. DevTools panel: `chrome.devtools.panels.create('Phosphor')`, capture via `chrome.tabs.captureVisibleTab`
-   (verify its colour space on macOS first), run Engine 2 in the panel on `ImageData`.
-3. Live view: render the per-pixel function as a 3D LUT and apply it through a WebGL overlay; needs research on
-   keeping pointer events on the page (`pointer-events: none` overlay fed by frame capture).
-4. Native Messaging host + `phosphor setup` + Homebrew formula (compiles the helper with `swiftc`).
+1. Run the panel in a real DevTools window on macOS, and the helper with an external HDMI/DP monitor (EDID path).
+2. Publish to the Chrome Web Store (developer account, privacy policy); set `STORE_URL` in `apps/cli/setup.ts`.
+   Microsoft Edge Add-ons is a free alternative listing.
+3. Specific monitor profiles from datasheets or colorimeter measurements (`manufacturer-spec` / `measured` provenance).
+4. Findings (spec §9 E): flag status colours, borders and text whose contrast collapses on the selected target.
