@@ -1,8 +1,10 @@
 class ScreenQuality < Formula
   desc "See how a UI reproduces on other displays: luminance, contrast, gamut, gamma, more"
   homepage "https://github.com/navajyoth-puthalath13/Phosphor"
-  url "https://github.com/navajyoth-puthalath13/Phosphor/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "SHA256_PLACEHOLDER"
+  # Pinned to a commit tarball; switch to refs/tags/vX.Y.Z once releases are tagged.
+  url "https://github.com/navajyoth-puthalath13/Phosphor/archive/0c8b264b954f3cfc9667c2d41b0fdb533eeb4ff0.tar.gz"
+  version "0.1.0"
+  sha256 "f822346b47b3f86779457f666e099c674335cb50dd5be05d13502100c413e9b9"
   head "https://github.com/navajyoth-puthalath13/Phosphor.git", branch: "main"
 
   depends_on :macos

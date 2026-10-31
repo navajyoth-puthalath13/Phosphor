@@ -6,30 +6,30 @@ white point, bit depth, chroma — and shows the result on yours. It is not a vi
 
 ![Contact sheet](docs/contact-sheet.png)
 
-## Install
+## Install (Homebrew, macOS)
 
-Requires Node ≥ 22.18. Display detection additionally needs macOS with Xcode Command Line Tools
-(`xcode-select --install`). Homebrew packaging is a later milestone; until then:
+```bash
+brew tap navajyoth-puthalath13/phosphor https://github.com/navajyoth-puthalath13/Phosphor
+brew install screen-quality
+```
+
+This builds the CLI and compiles the native display helper (needs Xcode Command Line Tools, which Homebrew
+already requires). Check the install with `brew test screen-quality`; update with `brew upgrade screen-quality`;
+remove with `brew uninstall screen-quality && brew untap navajyoth-puthalath13/phosphor`.
+
+### From source (development)
+
+Requires Node ≥ 22.18.
 
 ```bash
 git clone https://github.com/navajyoth-puthalath13/Phosphor.git
 cd Phosphor          # skip if you are already in the folder
 npm install          # installs dependencies and builds dist/
 npm link             # puts `screen-quality` on your PATH
+native/macos-helper/build.sh   # macOS: build the display helper
 ```
 
-If `npm link` fails with a permissions error, your Node is installed system-wide; either use Node from
-Homebrew (`brew install node`) or run the CLI without linking: `npm run sq -- profiles`.
-
-On macOS, build the native display helper once (from the same folder):
-
-```bash
-native/macos-helper/build.sh
-```
-
-To update later: `git pull && npm install`. To remove: `npm unlink -g screen-quality`.
-
-(`npm install -g github:…` is not supported: npm 10 links global git installs to a temporary folder it then deletes.)
+Don't have both installed at once: `npm unlink -g screen-quality` before `brew install`.
 
 ## Use
 

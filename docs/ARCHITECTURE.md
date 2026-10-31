@@ -47,7 +47,7 @@ Dependency rule: engines import `packages/*` only, never each other. Engine 2 ne
 | 4 Target profiles | 7 generic profiles with sources; custom-profile save/load not yet |
 | 5 DevTools panel | Not started |
 | 6 Live reproduction | Not started |
-| 7 Homebrew | Not started |
+| 7 Homebrew | Formula in `Formula/` (tap this repo by URL). Native Messaging / `setup` not started. |
 
 ## Next steps
 
