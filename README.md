@@ -10,8 +10,12 @@ white point, bit depth, chroma — and shows the result on yours. It is not a vi
 
 ```bash
 brew tap navajyoth-puthalath13/phosphor https://github.com/navajyoth-puthalath13/Phosphor
+brew trust --formula navajyoth-puthalath13/phosphor/screen-quality
 brew install screen-quality
 ```
+
+Homebrew refuses formulas from third-party taps until you trust them; `brew trust` above approves only this
+one formula. Read `Formula/screen-quality.rb` first if you want to see exactly what it runs.
 
 This builds the CLI and compiles the native display helper (needs Xcode Command Line Tools, which Homebrew
 already requires). Check the install with `brew test screen-quality`; update with `brew upgrade screen-quality`;
