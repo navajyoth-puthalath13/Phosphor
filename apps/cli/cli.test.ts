@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, symlinkSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, symlinkSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -31,6 +31,18 @@ describe('CLI through an npm-style symlink', () => {
     for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - b[i]));
     expect(worst).toBeLessThanOrEqual(2); // two 8-bit roundings
     expect(log).toBe('');
+  });
+
+  it('exports a profile, and simulates with an edited copy via --target-file', () => {
+    const t = JSON.parse(run('profiles', '--export', 'budget-tn'));
+    Object.assign(t, { id: 'ward-4b', name: 'Ward 4B monitor', technology: 'custom' });
+    t.luminance = { value: 150, source: 'measured', confidence: 'high', unit: 'cd/m²' };
+    const file = join(dir, 'ward-4b.json'), out = join(dir, 'ward.png');
+    writeFileSync(file, JSON.stringify(t));
+    execFileSync(bin, ['simulate', fixture('clinical-ui.png'), '--target-file', file, '-o', out], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    expect(existsSync(out)).toBe(true);
+    t.bitDepth.value = 99; writeFileSync(file, JSON.stringify(t));
+    expect(() => run('simulate', fixture('clinical-ui.png'), '--target-file', file, '-o', out)).toThrow(/bitDepth.value/);
   });
 
   it('fails loudly on a bad target', () => expect(() => run('simulate', 'x.png', '-t', 'nope', '-o', 'y.png')).toThrow(/unknown --target/));

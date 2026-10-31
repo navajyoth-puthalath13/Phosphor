@@ -8,6 +8,7 @@ import { buildSourceProfiles, type HelperReport } from '../../engines/display-de
 import type { Sourced, SourceDisplayProfile } from '../../packages/profile-schema/index.ts';
 import { simulate, EFFECTS, type Effect } from '../../engines/display-reproduction/pipeline.ts';
 import { TARGETS, getTarget } from '../../packages/display-profiles/targets.ts';
+import { validateTarget } from '../../packages/display-profiles/validate.ts';
 import { PNG } from 'pngjs';
 import { parseIcc, iccFromPng } from '../../packages/icc/index.ts';
 import { contentToSrgb, isSrgbLike } from '../../engines/display-reproduction/content.ts';
@@ -87,17 +88,24 @@ function main(argv: string[]) {
     return;
   }
   if (cmd === 'profiles') {
+    const { values } = parseArgs({ args: rest, options: { export: { type: 'string' } } });
+    if (values.export) {
+      const t = getTarget(values.export);
+      if (!t) throw new Error(`unknown profile ${values.export}. Choose one of: ${TARGETS.map(x => x.id).join(', ')}`);
+      console.log(JSON.stringify(t, null, 2)); // Infinity contrast becomes null, which the engine reads as ideal black
+      return;
+    }
     for (const t of TARGETS) console.log(`${t.id.padEnd(22)} ${t.name}`);
     return;
   }
   if (cmd === 'simulate') {
     const { values, positionals } = parseArgs({ args: rest, allowPositionals: true, options: {
-      target: { type: 'string', short: 't' }, out: { type: 'string', short: 'o' },
+      target: { type: 'string', short: 't' }, 'target-file': { type: 'string' }, out: { type: 'string', short: 'o' },
       'viewer-nits': { type: 'string' }, mode: { type: 'string', default: 'absolute' },
       only: { type: 'string' }, disable: { type: 'string' },
     } });
-    const target = getTarget(values.target ?? '');
-    if (!target) throw new Error(`unknown --target. Choose one of: ${TARGETS.map(t => t.id).join(', ')}`);
+    const target = values['target-file'] ? validateTarget(JSON.parse(readFileSync(values['target-file'], 'utf8'))) : getTarget(values.target ?? '');
+    if (!target) throw new Error(`unknown --target. Choose one of: ${TARGETS.map(t => t.id).join(', ')} (or --target-file my-display.json)`);
     if (positionals.length !== 1 || !values.out) throw new Error('usage: phosphor simulate <in.png> -t <target> -o <out.png>');
     if (values.mode !== 'absolute' && values.mode !== 'adapted') throw new Error('--mode must be absolute or adapted');
     const list = (v?: string) => (v ? v.split(',').map(e => { if (!EFFECTS.includes(e as Effect)) throw new Error(`unknown effect ${e}; effects: ${EFFECTS.join(', ')}`); return e as Effect; }) : []);
@@ -117,8 +125,8 @@ function main(argv: string[]) {
   console.log([
     'usage:',
     '  phosphor detect [--json] [--from helper-report.json]',
-    '  phosphor profiles',
-    '  phosphor simulate <in.png> -t <target> -o <out.png> [--viewer-nits N] [--mode absolute|adapted]',
+    '  phosphor profiles [--export <id>]       export a profile as JSON to edit into your own',
+    '  phosphor simulate <in.png> (-t <target> | --target-file my.json) -o <out.png> [--viewer-nits N] [--mode absolute|adapted]',
     `                          [--only e1,e2 | --disable e1,e2]   effects: ${EFFECTS.join(', ')}`,
   ].join('\n'));
   if (cmd && cmd !== 'help' && cmd !== '--help') process.exitCode = 2;
