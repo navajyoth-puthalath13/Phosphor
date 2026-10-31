@@ -29,7 +29,7 @@
   "edidsBase64" : [
 
   ],
-  "helper" : "screen-quality-macos-helper",
+  "helper" : "phosphor-macos-helper",
   "helperVersion" : "0.1.0",
   "macOS" : "27.0.0"
 }

@@ -1,21 +1,21 @@
 {
-  "name": "screen-quality",
+  "name": "phosphor",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Display compatibility & visual reproduction toolkit",
   "bin": {
-    "screen-quality": "dist/apps/cli/screen-quality.js"
+    "phosphor": "dist/apps/cli/phosphor.js"
   },
   "engines": {
     "node": ">=22.18"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node -e \"require('fs').chmodSync('dist/apps/cli/screen-quality.js', 0o755)\"",
+    "build": "tsc -p tsconfig.build.json && node -e \"require('fs').chmodSync('dist/apps/cli/phosphor.js', 0o755)\"",
     "prepare": "npm run build",
     "test": "vitest run",
     "typecheck": "tsc",
-    "sq": "node apps/cli/screen-quality.ts"
+    "cli": "node apps/cli/phosphor.ts"
   },
   "dependencies": {
     "pngjs": "^7.0.0"

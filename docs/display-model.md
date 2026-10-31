@@ -1,6 +1,6 @@
 # Display reproduction model (Engine 2)
 
-Screen Quality does not apply visual effects. It computes, for each colour, **the light a target display
+Phosphor does not apply visual effects. It computes, for each colour, **the light a target display
 would emit** for the signal a website sends it, then asks the viewer's display to emit that light.
 
 ![Contact sheet](contact-sheet.png)

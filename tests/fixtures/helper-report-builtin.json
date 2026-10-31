@@ -1,5 +1,5 @@
 {
-  "helper": "screen-quality-macos-helper",
+  "helper": "phosphor-macos-helper",
   "helperVersion": "0.1.0",
   "macOS": "15.1.0",
   "edidsBase64": [],

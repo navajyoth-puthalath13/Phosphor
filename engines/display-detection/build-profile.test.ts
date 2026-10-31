@@ -7,7 +7,7 @@ const icc = readFileSync(new URL('../../tests/fixtures/lcms-srgb.icc', import.me
 const edid = Buffer.from(makeEdid()).toString('base64');
 
 const report = (over: Partial<HelperReport['displays'][0]> = {}, edids = [edid]): HelperReport => ({
-  helper: 'screen-quality-macos-helper', helperVersion: '0.1.0', macOS: '15.1.0', edidsBase64: edids,
+  helper: 'phosphor-macos-helper', helperVersion: '0.1.0', macOS: '15.1.0', edidsBase64: edids,
   displays: [{ id: 2, main: true, builtIn: false, vendor: 0x10ac, model: 0x1234, serial: 0x12345678,
     name: 'DELL P2419H', pixels: { width: 1920, height: 1080 }, points: { width: 1920, height: 1080 },
     refreshHz: 60, mm: { width: 527, height: 296 }, colourSpaceName: 'kCGColorSpaceDisplay',

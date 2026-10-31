@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// screen-quality CLI. Commands: detect, profiles, simulate
+// phosphor CLI. Commands: detect, profiles, simulate
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -14,12 +14,12 @@ import { contentToSrgb, isSrgbLike } from '../../engines/display-reproduction/co
 
 // Package root is two levels up from source (apps/cli) and three from the compiled dist/apps/cli.
 const ROOT = ['../../', '../../../'].map(p => new URL(p, import.meta.url)).find(u => existsSync(new URL('package.json', u)))!;
-const HELPER_BUILD = fileURLToPath(new URL('native/macos-helper/build/screen-quality-helper', ROOT));
+const HELPER_BUILD = fileURLToPath(new URL('native/macos-helper/build/phosphor-helper', ROOT));
 
 function readHelperReport(from?: string): HelperReport {
   if (from) return JSON.parse(readFileSync(from, 'utf8'));
   if (process.platform !== 'darwin') throw new Error('display detection needs macOS (or pass --from <helper-report.json>)');
-  const helper = process.env.SCREEN_QUALITY_HELPER ?? (existsSync(HELPER_BUILD) ? HELPER_BUILD : 'screen-quality-helper');
+  const helper = process.env.PHOSPHOR_HELPER ?? (existsSync(HELPER_BUILD) ? HELPER_BUILD : 'phosphor-helper');
   try { return JSON.parse(execFileSync(helper, { encoding: 'utf8' })); }
   catch (e) { throw new Error(`could not run the native helper (${helper}). Build it with native/macos-helper/build.sh\n${(e as Error).message}`); }
 }
@@ -98,7 +98,7 @@ function main(argv: string[]) {
     } });
     const target = getTarget(values.target ?? '');
     if (!target) throw new Error(`unknown --target. Choose one of: ${TARGETS.map(t => t.id).join(', ')}`);
-    if (positionals.length !== 1 || !values.out) throw new Error('usage: screen-quality simulate <in.png> -t <target> -o <out.png>');
+    if (positionals.length !== 1 || !values.out) throw new Error('usage: phosphor simulate <in.png> -t <target> -o <out.png>');
     if (values.mode !== 'absolute' && values.mode !== 'adapted') throw new Error('--mode must be absolute or adapted');
     const list = (v?: string) => (v ? v.split(',').map(e => { if (!EFFECTS.includes(e as Effect)) throw new Error(`unknown effect ${e}; effects: ${EFFECTS.join(', ')}`); return e as Effect; }) : []);
     const enabled = new Set<Effect>(values.only ? list(values.only) : EFFECTS.filter(e => !list(values.disable).includes(e)));
@@ -116,13 +116,13 @@ function main(argv: string[]) {
   }
   console.log([
     'usage:',
-    '  screen-quality detect [--json] [--from helper-report.json]',
-    '  screen-quality profiles',
-    '  screen-quality simulate <in.png> -t <target> -o <out.png> [--viewer-nits N] [--mode absolute|adapted]',
+    '  phosphor detect [--json] [--from helper-report.json]',
+    '  phosphor profiles',
+    '  phosphor simulate <in.png> -t <target> -o <out.png> [--viewer-nits N] [--mode absolute|adapted]',
     `                          [--only e1,e2 | --disable e1,e2]   effects: ${EFFECTS.join(', ')}`,
   ].join('\n'));
   if (cmd && cmd !== 'help' && cmd !== '--help') process.exitCode = 2;
 }
 
 try { main(process.argv.slice(2)); }
-catch (e) { console.error(`screen-quality: ${(e as Error).message}`); process.exitCode = 1; }
+catch (e) { console.error(`phosphor: ${(e as Error).message}`); process.exitCode = 1; }

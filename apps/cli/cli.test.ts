@@ -6,12 +6,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const cli = fileURLToPath(new URL('./screen-quality.ts', import.meta.url));
+const cli = fileURLToPath(new URL('./phosphor.ts', import.meta.url));
 const fixture = (f: string) => fileURLToPath(new URL(`../../tests/fixtures/${f}`, import.meta.url));
 
 // npm installs the bin as a symlink; run it the same way so "it printed nothing" can't regress.
-const dir = mkdtempSync(join(tmpdir(), 'sq-'));
-const bin = join(dir, 'screen-quality');
+const dir = mkdtempSync(join(tmpdir(), 'phosphor-'));
+const bin = join(dir, 'phosphor');
 symlinkSync(cli, bin);
 const run = (...args: string[]) => execFileSync(bin, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 

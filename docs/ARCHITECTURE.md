@@ -1,7 +1,7 @@
 # Architecture & decisions
 
 ```
-apps/cli/screen-quality.ts          detect · profiles · simulate
+apps/cli/phosphor.ts          detect · profiles · simulate
 engines/display-detection/          Engine 1 — raw facts → SourceDisplayProfile (edid.ts, build-profile.ts)
 engines/display-reproduction/       Engine 2 — pixels + TargetDisplayProfile + ViewerContext → pixels (content.ts, stages.ts, pipeline.ts)
 packages/profile-schema/            the only contract between the engines (types + provenance)
@@ -52,8 +52,8 @@ Dependency rule: engines import `packages/*` only, never each other. Engine 2 ne
 ## Next steps
 
 1. Build and run the helper on real Macs (built-in panel, external HDMI/DP monitor) and add their reports to `tests/fixtures/`.
-2. DevTools panel: `chrome.devtools.panels.create('Screen Quality')`, capture via `chrome.tabs.captureVisibleTab`
+2. DevTools panel: `chrome.devtools.panels.create('Phosphor')`, capture via `chrome.tabs.captureVisibleTab`
    (verify its colour space on macOS first), run Engine 2 in the panel on `ImageData`.
 3. Live view: render the per-pixel function as a 3D LUT and apply it through a WebGL overlay; needs research on
    keeping pointer events on the page (`pointer-events: none` overlay fed by frame capture).
-4. Native Messaging host + `screen-quality setup` + Homebrew formula (compiles the helper with `swiftc`).
+4. Native Messaging host + `phosphor setup` + Homebrew formula (compiles the helper with `swiftc`).

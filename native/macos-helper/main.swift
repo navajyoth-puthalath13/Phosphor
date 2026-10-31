@@ -1,4 +1,4 @@
-// screen-quality-helper: dumps raw macOS display facts as JSON on stdout.
+// phosphor-helper: dumps raw macOS display facts as JSON on stdout.
 // It interprets nothing — EDID/ICC parsing and provenance live in engines/display-detection (TypeScript, tested).
 // Build: native/macos-helper/build.sh
 
@@ -87,7 +87,7 @@ func allEdids() -> [Data] {
 
 let os = ProcessInfo.processInfo.operatingSystemVersion
 let report: [String: Any] = [
-    "helper": "screen-quality-macos-helper",
+    "helper": "phosphor-macos-helper",
     "helperVersion": helperVersion,
     "macOS": "\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)",
     "displays": onlineDisplays().map(describe),
